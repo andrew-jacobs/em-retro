@@ -1,1 +1,6 @@
 /code/6502/mos/*.obj
+/build
+/debug
+/code/65c02/forth/*.obj
+/code/scmp/nibl/*.obj
+/disassembly
