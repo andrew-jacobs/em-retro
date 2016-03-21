@@ -1,0 +1,1642 @@
+
+Portable 65xx Assembler [15.02]
+
+                            ;===============================================================================
+                            ;  __  __  ___  ____    _____                 _       _   _
+                            ; |  \/  |/ _ \/ ___|  | ____|_ __ ___  _   _| | __ _| |_(_) ___  _ __
+                            ; | |\/| | | | \___ \  |  _| | '_ ` _ \| | | | |/ _` | __| |/ _ \| '_ \
+                            ; | |  | | |_| |___) | | |___| | | | | | |_| | | (_| | |_| | (_) | | | |
+                            ; |_|  |_|\___/|____/  |_____|_| |_| |_|\__,_|_|\__,_|\__|_|\___/|_| |_|
+                            ;
+                            ; An Extended Acorn MOS Emulation
+                            ;-------------------------------------------------------------------------------
+                            ; Copyright (C)2013-2015 HandCoded Software Ltd.
+                            ; All rights reserved.
+                            ;
+                            ; This work is made available under the terms of the Creative Commons
+                            ; Attribution-NonCommercial 2.0 license. Open the following URL to see the
+                            ; details.
+                            ;
+                            ; http://creativecommons.org/licenses/by-nc/2.0/
+                            ;-------------------------------------------------------------------------------
+                            ;
+                            ; Notes:
+                            ;
+                            ;
+                            ;===============================================================================
+                            ; Revision History:
+                            ;
+                            ; 2013-04-11 AJ Initial version
+                            ;-------------------------------------------------------------------------------
+                            ; $Id: mos.asm 48 2015-07-12 22:50:54Z andrew $
+                            ;-------------------------------------------------------------------------------
+                            
+                                            .include "../em-6502.inc"
+                                            .list
+                                            
+                            ; Interrupt flag masks
+                            
+        00000001          = INT_100HZ       .equ    1<<0
+        00000002          = INT_UART_RX     .equ    1<<1
+        00000004          = INT_UART_TX     .equ    1<<2
+                            
+                            ;  Read the interrupt flags into A
+                            
+                            IO_IFR          .macro
+                                            .byte   $02,$00
+                                            .endm
+                            
+                            ; Write the interrupt flags from A
+                            
+                            IO_IFW          .macro
+                                            .byte   $02,$01
+                                            .endm
+                            
+                            ; Clear interrupt flags specified by A
+                            
+                            IO_IFC          .macro
+
+Portable 65xx Assembler [15.02]
+
+                                            .byte   $02,$06
+                                            .endm
+                            
+                            ; Read the interrupt enables into A
+                            
+                            IO_IER          .macro
+                                            .byte   $02,$02
+                                            .endm
+                            
+                            ; Write the interrupt enables from A
+                            
+                            IO_IEW          .macro
+                                            .byte   $02,$03
+                                            .endm
+                            
+                            ; Transmit the character in A
+                            
+                            IO_TXD          .macro
+                                            .byte   $02,$04
+                                            .endm
+                            
+                            ; Receive a characters into A
+                            
+                            IO_RXD          .macro
+                                            .byte   $02,$05
+                                            .endm
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; Select ROM bank specified by A<3:0>
+                            
+                            IO_BNK          .macro
+                                            .byte   $BB
+                                            .endm
+                            
+                            ;===============================================================================
+                            ; Target Environment
+                            ;-------------------------------------------------------------------------------
+                            
+                                            .6502
+                            
+        00000007          = N               .EQU    7
+        00000006          = V               .EQU    6
+        00000004          = B               .EQU    4
+        00000003          = D               .EQU    3
+        00000002          = I               .EQU    2
+        00000001          = Z               .EQU    1
+        00000000          = C               .EQU    0
+                            
+                            ;===============================================================================
+                            ; ASCII Control Characters
+                            ;-------------------------------------------------------------------------------
+                            
+        00000000          = NUL             .EQU    $00
+
+Portable 65xx Assembler [15.02]
+
+        00000007          = BEL             .EQU    $07
+        00000008          = BS              .EQU    $08
+        00000009          = HT              .EQU    $09
+        0000000D          = CR              .EQU    $0D
+        0000000A          = LF              .EQU    $0A
+        0000001B          = ESC             .EQU    $1B
+        0000007F          = DEL             .EQU    $7F
+                            
+        00000000          = BUF_KBD         .EQU    0
+        00000001          = BUF_UTX         .EQU    1
+        00000002          = BUF_URX         .EQU    2
+        00000003          = BUF_PRN         .EQU    3
+        00000004          = BUF_SN0         .EQU    4
+        00000005          = BUF_SN1         .EQU    5
+        00000006          = BUF_SN2         .EQU    6
+        00000007          = BUF_SN3         .EQU    7
+        00000008          = BUF_SPH         .EQU    8
+                            
+                            ;===============================================================================
+                            ; Data Areas
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; 00-8F Language
+                            ; 90-9F Econet
+                            ; A0-A7 NMI Owner
+                            ; A8-AF OS
+                            ; B0-BF Filing System Scratch
+                            ; C0-CF Filing System
+                            ; D0-DF Video
+                            
+        000000E8          = BUF_PTR         .EQU    $E8             ; OSWORD 0 Buffer pointer
+                            
+        000000EF          = OS_A            .EQU    $EF
+        000000F0          = OS_X            .EQU    $F0
+        000000F1          = OS_Y            .EQU    $F1
+        000000F4          = ROM_NUM         .EQU    $F4
+                            
+        000000FA          = OS_WS           .EQU    $FA             ; General purpose workspace ($FA/$FB)
+        000000FC          = IRQ_TMP         .EQU    $FC
+        000000FD          = OS_PTR          .EQU    $FD             ; General purpose pointer ($FD/$FE)
+        000000FF          = ESCFLG          .EQU    $FF
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+        00000100          = STACK           .EQU    $0100
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; Vector table
+                            
+        00000200          = USERV           .EQU    $0200
+        00000202          = BRKV            .EQU    $0202
+        00000204          = IRQV1           .EQU    $0204
+        00000206          = IRQV2           .EQU    $0206
+
+Portable 65xx Assembler [15.02]
+
+        00000208          = CLIV            .EQU    $0208
+        0000020A          = BYTEV           .EQU    $020A
+        0000020C          = WORDV           .EQU    $020C
+        0000020E          = WRCHV           .EQU    $020E
+        00000210          = RDCHV           .EQU    $0210
+        00000212          = FILEV           .EQU    $0212
+        00000214          = ARGSV           .EQU    $0214
+        00000216          = BGETV           .EQU    $0216
+        00000218          = BPUTV           .EQU    $0218
+        0000021A          = GBPBV           .EQU    $021A
+        0000021C          = FINDV           .EQU    $021C
+        0000021E          = FSCV            .EQU    $021E
+        00000220          = EVNTV           .EQU    $0220
+        00000222          = UPTV            .EQU    $0222
+        00000224          = NETV            .EQU    $0224
+        00000226          = VDUV            .EQU    $0226
+        00000228          = KEYV            .EQU    $0228
+        0000022A          = INSV            .EQU    $022A
+        0000022C          = REMV            .EQU    $022C
+        0000022E          = CNPV            .EQU    $022E
+        00000230          = IND1V           .EQU    $0230
+        00000232          = IND2V           .EQU    $0232
+        00000234          = IND3V           .EQU    $0234
+                            
+        00000236          = OS_VARS         .EQU    $0236           ; Start of OS variables
+                            
+        00000243          = OSHWM_P         .EQU    $0243           ; Primary OSHWM
+        00000244          = OSHWM           .EQU    $0244           ; Current OSHWM (PAGE)
+        0000024B          = BASIC_ROM       .EQU    $024B           ; ROM number containing BASIC
+                            
+        00000283          = CLKIDX          .EQU    $0283           ; Clock offset (5 or 10)
+        0000028C          = ROM             .EQU    $028C           ; Current ROM number
+        00000292          = TIME            .EQU    $0292           ; Time (A + B)
+                            
+        000002A1          = ROM_TYPE        .EQU    $02A1           ; ROM type byte
+        000002B1          = INKEY_CNT       .EQU    $02B1           ; 16-bit INKEY count
+        000002B3          = MAX_LEN         .EQU    $02B3           ; Maximum line length
+        000002B4          = MIN_CHR         .EQU    $02B4           ; Minimum acceptable ASCII character
+        000002B5          = MAX_CHR         .EQU    $02B5           ; Maximum acceptable ASCII character
+                            
+        000002D8          = BUF_HD          .EQU    $02D8           ; Buffer head indexes
+        000002E1          = BUF_TL          .EQU    $02E1           ; Buffer tail indexes
+                            
+        000002EE          = FILE_BLK        .EQU    $02EE
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; 300-37F VDU
+                            ; 400-7FF Language Workspace
+                            ; 800-8FF Buffers
+                            ; 900-9FF Envelopes
+                            ; A00-AFF Cassette buffer
+                            ; B00-BFF Soft Key Buffer
+                            ; C00-CFF Font
+
+Portable 65xx Assembler [15.02]
+
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+        00000D00          = NMI             .EQU    $0D00           ; Fixed NMI handler location
+                            
+                            ;===============================================================================
+                            ; ROM Image
+                            ;-------------------------------------------------------------------------------
+                            
+                                            .CODE
+                                            .ORG    $C000
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; Reset Handler
+                            
+                            RES:
+00C000  A940              :                 LDA     #$40            ; Set NMI first instruction to RTI
+00C002  8D000D            :                 STA     NMI
+                            
+00C005  78                :                 SEI
+00C006  D8                :                 CLD
+00C007  A2FF              :                 LDX     #$FF            ; Reset the system stack
+00C009  9A                :                 TXS
+                            
+00C00A  E8                :                 INX
+00C00B  8A                :                 TXA
+                                            REPEAT                  ; Clear operating system memory area
+00C00C  9500              :                  STA    $0000,X
+00C00E  9D0001            :                  STA    $0100,X
+00C011  9D0002            :                  STA    $0200,X
+00C014  9D0003            :                  STA    $0300,X
+00C017  9D0004            :                  STA    $0400,X
+00C01A  9D0005            :                  STA    $0500,X
+00C01D  9D0006            :                  STA    $0600,X
+00C020  9D0007            :                  STA    $0700,X
+00C023  9D0008            :                  STA    $0800,X
+00C026  9D0009            :                  STA    $0900,X
+00C029  9D000A            :                  STA    $0A00,X
+00C02C  9D000B            :                  STA    $0B00,X
+00C02F  9D000C            :                  STA    $0C00,X
+00C032  E000              :                  CPX    #0
+00C034  F003              :                  IF     NE
+00C036  9D000D            :                   STA   $0D00,X
+                                             ENDIF
+00C039  E8                :                  INX
+00C03A  D0D0              :                 UNTIL   EQ
+                            
+00C03C  A235              :                 LDX     #53             ; Initialise default vectors
+                                            REPEAT
+00C03E  BDCDC0            :                  LDA    VECTORS,X
+00C041  9D0002            :                  STA    USERV,X
+00C044  CA                :                  DEX
+00C045  10F7              :                 UNTIL   MI
+                            
+
+Portable 65xx Assembler [15.02]
+
+00C047  A208              :                 LDX     #8              ; Clear all buffers
+                                            REPEAT
+00C049  BD9BC3            :                  LDA    BUF_IX,X
+00C04C  9DD802            :                  STA    BUF_HD,X
+00C04F  9DE102            :                  STA    BUF_TL,X
+00C052  CA                :                  DEX
+00C053  10F4              :                 UNTIL   MI
+                            
+00C055  A209              :                 LDX     #9              ; Reset clock values
+00C057  A900              :                 LDA     #0
+                                            REPEAT
+00C059  9D9202            :                  STA    TIME,X
+00C05C  CA                :                  DEX
+00C05D  10FA              :                 UNTIL   MI
+                            
+00C05F  A905              :                 LDA     #5              ; And set current index
+00C061  8D8302            :                 STA     CLKIDX
+                            
+00C064  A903              :                 LDA     #INT_100HZ|INT_UART_RX
+                                            IO_IEW                  ; Enable hardware interrupts
+00C066  0203              +                 .byte   $02,$03
+00C068  58                :                 CLI
+                            
+00C069  A90E              :                 LDA     #$0E            ; Reset OSHWM
+00C06B  8D4302            :                 STA     OSHWM_P
+00C06E  8D4402            :                 STA     OSHWM
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+00C071  20E7FF            :                 JSR     OSNEWL
+                            
+00C074  A200              :                 LDX     #0              ; Print ROM Title
+                                            REPEAT
+00C076  BDAFC0            :                  LDA    OS_TITLE,X
+00C079  F007              :                  BREAK  EQ
+00C07B  20E3FF            :                  JSR    OSASCI
+00C07E  E8                :                  INX
+00C07F  4C76C0            :                 FOREVER
+                            
+00C082  20E7FF            :                 JSR     OSNEWL
+00C085  20E7FF            :                 JSR     OSNEWL
+                            
+00C088  A20F              :                 LDX     #15             ; Scan all the ROMS
+                                            REPEAT
+00C08A  8A                :                  TXA
+                                             IO_BNK
+00C08B  BB                +                 .byte   $BB
+00C08C  AD0680            :                  LDA    $8006           ; And save their type bytes
+00C08F  9DA102            :                  STA    ROM_TYPE,X
+00C092  F005              :                  IF     NE
+00C094  3003              :                   IF    PL
+00C096  8D4B02            :                    STA  BASIC_ROM
+                                              ENDIF
+                                             ENDIF
+
+Portable 65xx Assembler [15.02]
+
+00C099  CA                :                  DEX
+00C09A  10EE              :                 UNTIL   MI
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+00C09C  AE4B02            :                 LDX     BASIC_ROM       ; Start the language ROM
+00C09F  38                :                 SEC
+00C0A0  4C38C2            :                 JMP     BYTE_8E
+                            
+00C0A3  00F9              :                 BRK     #$F9
+00C0A5  4C616E6775616765> :                 .BYTE   "Language?",0
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            OS_TITLE:
+00C0AF  5669727475616C20> :                 .BYTE   "Virtual BBC Microcomputer 32K",0
+                            
+00C0CD  09C1              : VECTORS:        .WORD   _USER
+00C0CF  AFC4              :                 .WORD   _BRK
+00C0D1  61C4              :                 .WORD   _IRQ1
+00C0D3  ACC4              :                 .WORD   _IRQ2
+00C0D5  0AC1              :                 .WORD   _CLI
+00C0D7  1EC1              :                 .WORD   _BYTE
+00C0D9  72C2              :                 .WORD   _WORD
+00C0DB  38C3              :                 .WORD   _WRCH
+00C0DD  60C3              :                 .WORD   _RDCH
+00C0DF  7AC3              :                 .WORD   _FILE
+00C0E1  7BC3              :                 .WORD   _ARGS
+00C0E3  7CC3              :                 .WORD   _BGET
+00C0E5  7DC3              :                 .WORD   _BPUT
+00C0E7  7EC3              :                 .WORD   _GBPB
+00C0E9  7FC3              :                 .WORD   _FIND
+00C0EB  80C3              :                 .WORD   _FSC
+00C0ED  81C3              :                 .WORD   _EVNT
+00C0EF  85C3              :                 .WORD   _UPT
+00C0F1  86C3              :                 .WORD   _NET
+00C0F3  87C3              :                 .WORD   _VDU
+00C0F5  88C3              :                 .WORD   _KEY
+00C0F7  AFC3              :                 .WORD   _INS
+00C0F9  DFC3              :                 .WORD   _REM
+00C0FB  12C4              :                 .WORD   _CNP
+00C0FD  39C4              :                 .WORD   _IND1
+00C0FF  3AC4              :                 .WORD   _IND2
+00C101  3BC4              :                 .WORD   _IND3
+                            
+                            ;===============================================================================
+                            ; Utility Functions
+                            ;-------------------------------------------------------------------------------
+                            
+                            CALL_WS:
+00C103  6CFA00            :                 JMP     (OS_WS)
+                            
+                            ; Useful bytes for setting the N & V flags with a BIT
+                            
+
+Portable 65xx Assembler [15.02]
+
+00C106  80                : SET_N:          .BYTE   $80
+00C107  40                : SET_V:          .BYTE   $40
+00C108  C0                : SET_NV:         .BYTE   $C0
+                            
+                            ;===============================================================================
+                            ; Default User Vector Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            _USER:
+00C109  60                :                 RTS                     ; Do nothing by default
+                            
+                            ;===============================================================================
+                            ; Default OSCLI Vector Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            _CLI:
+00C10A  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+00C10B  4241534943        :                 .BYTE   "BASIC"
+00C110  4658              :                 .BYTE   "FX"
+00C112  4C4F4144          :                 .BYTE   "LOAD"
+00C116  53415645          :                 .BYTE   "SAVE"
+00C11A  44554D50          :                 .BYTE   "DUMP"
+                            
+                            ;===============================================================================
+                            ; Default OSBYTE Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            _BYTE:
+00C11E  48                :                 PHA
+00C11F  08                :                 PHP
+00C120  78                :                 SEI
+00C121  85EF              :                 STA     OS_A
+00C123  86F0              :                 STX     OS_X
+00C125  84F1              :                 STY     OS_Y
+                            
+00C127  C916              :                 CMP     #$16
+00C129  B017              :                 IF      CC              ; OSBYTE $00-$15
+00C12B  A8                :                  TAY
+00C12C  B97CC1            :                  LDA    ByteLo1-$00,Y
+00C12F  85FA              :                  STA    OS_WS+0
+00C131  B992C1            :                  LDA    ByteHi1-$00,Y
+00C134  85FB              :                  STA    OS_WS+1
+00C136  A5EF              :                  LDA    OS_A
+00C138  A4F1              :                  LDY    OS_Y
+00C13A  2003C1            :                  JSR    CALL_WS
+00C13D  6A                :                  ROR    A
+00C13E  28                :                  PLP
+00C13F  2A                :                  ROL    A
+00C140  68                :                  PLA
+00C141  60                :                  RTS
+                                            ENDIF
+
+Portable 65xx Assembler [15.02]
+
+                            
+00C142  C975              :                 CMP     #$75
+00C144  901B              :                 IF      CS              ; OSBYTE $75-$A0
+00C146  C9A1              :                  CMP    #$A1
+00C148  B017              :                  IF     CC
+00C14A  A8                :                   TAY
+00C14B  B933C1            :                   LDA   ByteLo2-$75,Y
+00C14E  85FA              :                   STA   OS_WS+0
+00C150  B95FC1            :                   LDA   ByteHi2-$75,Y
+00C153  85FB              :                   STA   OS_WS+1
+00C155  A5EF              :                   LDA   OS_A
+00C157  A4F1              :                   LDY   OS_Y
+00C159  2003C1            :                   JSR   CALL_WS
+00C15C  6A                :                   ROR   A
+00C15D  28                :                   PLP
+00C15E  2A                :                   ROL   A
+00C15F  68                :                   PLA
+00C160  60                :                   RTS
+                                             ENDIF
+                                            ENDIF
+                            
+00C161  C9A6              :                 CMP     #$A6            ; OSBYTE $A6-$FF
+00C163  9014              :                 IF      CS
+00C165  AA                :                  TAX
+00C166  BD9001            :                  LDA    OS_VARS-$A6+0,X
+00C169  BC9101            :                  LDY    OS_VARS-$A6+1,X
+00C16C  48                :                  PHA
+00C16D  25F1              :                  AND    OS_Y
+00C16F  45F0              :                  EOR    OS_X
+00C171  9D9001            :                  STA    OS_VARS-$A6,X
+00C174  68                :                  PLA
+00C175  AA                :                  TAX
+00C176  28                :                  PLP
+00C177  68                :                  PLA
+00C178  60                :                  RTS
+                                            ENDIF
+                            
+00C179  28                :                 PLP
+00C17A  68                :                 PLA
+00C17B  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            ByteLo1:
+00C17C  00111111          :                 .BYTE   LO BYTE_00,LO BYTE_01,LO BYTE_02,LO BYTE_03
+00C180  11111111          :                 .BYTE   LO BYTE_04,LO BYTE_05,LO BYTE_06,LO BYTE_07
+00C184  11111111          :                 .BYTE   LO BYTE_08,LO BYTE_09,LO BYTE_0A,LO BYTE_0B
+00C188  11111111          :                 .BYTE   LO BYTE_0C,LO BYTE_0D,LO BYTE_0E,LO BYTE_0F
+00C18C  11111111          :                 .BYTE   LO BYTE_10,LO BYTE_11,LO BYTE_12,LO BYTE_13
+00C190  1111              :                 .BYTE   LO BYTE_14,LO BYTE_15
+                            
+                            ByteHi1:
+00C192  C2C2C2C2          :                 .BYTE   HI BYTE_00,HI BYTE_01,HI BYTE_02,HI BYTE_03
+00C196  C2C2C2C2          :                 .BYTE   HI BYTE_04,HI BYTE_05,HI BYTE_06,HI BYTE_07
+
+Portable 65xx Assembler [15.02]
+
+00C19A  C2C2C2C2          :                 .BYTE   HI BYTE_08,HI BYTE_09,HI BYTE_0A,HI BYTE_0B
+00C19E  C2C2C2C2          :                 .BYTE   HI BYTE_0C,HI BYTE_0D,HI BYTE_0E,HI BYTE_0F
+00C1A2  C2C2C2C2          :                 .BYTE   HI BYTE_10,HI BYTE_11,HI BYTE_12,HI BYTE_13
+00C1A6  C2C2              :                 .BYTE   HI BYTE_14,HI BYTE_15
+                            
+                            ByteLo2:
+00C1A8  111111            :                 .BYTE              LO BYTE_75,LO BYTE_76,LO BYTE_77
+00C1AB  11111111          :                 .BYTE   LO BYTE_78,LO BYTE_79,LO BYTE_7A,LO BYTE_7B
+00C1AF  11181818          :                 .BYTE   LO BYTE_7C,LO BYTE_7D,LO BYTE_7E,LO BYTE_7F
+00C1B3  1818191E          :                 .BYTE   LO BYTE_80,LO BYTE_81,LO BYTE_82,LO BYTE_83
+00C1B7  2424292E          :                 .BYTE   LO BYTE_84,LO BYTE_85,LO BYTE_86,LO BYTE_87
+00C1BB  33333337          :                 .BYTE   LO BYTE_88,LO BYTE_89,LO BYTE_8A,LO BYTE_8B
+00C1BF  3737385A          :                 .BYTE   LO BYTE_8C,LO BYTE_8D,LO BYTE_8E,LO BYTE_8F
+00C1C3  5A5A5E61          :                 .BYTE   LO BYTE_90,LO BYTE_91,LO BYTE_92,LO BYTE_93
+00C1C7  61646467          :                 .BYTE   LO BYTE_94,LO BYTE_95,LO BYTE_96,LO BYTE_97
+00C1CB  676D6D6D          :                 .BYTE   LO BYTE_98,LO BYTE_99,LO BYTE_9A,LO BYTE_9B
+00C1CF  6D6D7171          :                 .BYTE   LO BYTE_9C,LO BYTE_9D,LO BYTE_9E,LO BYTE_9F
+00C1D3  71                :                 .BYTE   LO BYTE_A0
+                            
+                            ByteHi2:
+00C1D4  C2C2C2            :                 .BYTE              HI BYTE_75,HI BYTE_76,HI BYTE_77
+00C1D7  C2C2C2C2          :                 .BYTE   HI BYTE_78,HI BYTE_79,HI BYTE_7A,HI BYTE_7B
+00C1DB  C2C2C2C2          :                 .BYTE   HI BYTE_7C,HI BYTE_7D,HI BYTE_7E,HI BYTE_7F
+00C1DF  C2C2C2C2          :                 .BYTE   HI BYTE_80,HI BYTE_81,HI BYTE_82,HI BYTE_83
+00C1E3  C2C2C2C2          :                 .BYTE   HI BYTE_84,HI BYTE_85,HI BYTE_86,HI BYTE_87
+00C1E7  C2C2C2C2          :                 .BYTE   HI BYTE_88,HI BYTE_89,HI BYTE_8A,HI BYTE_8B
+00C1EB  C2C2C2C2          :                 .BYTE   HI BYTE_8C,HI BYTE_8D,HI BYTE_8E,HI BYTE_8F
+00C1EF  C2C2C2C2          :                 .BYTE   HI BYTE_90,HI BYTE_91,HI BYTE_92,HI BYTE_93
+00C1F3  C2C2C2C2          :                 .BYTE   HI BYTE_94,HI BYTE_95,HI BYTE_96,HI BYTE_97
+00C1F7  C2C2C2C2          :                 .BYTE   HI BYTE_98,HI BYTE_99,HI BYTE_9A,HI BYTE_9B
+00C1FB  C2C2C2C2          :                 .BYTE   HI BYTE_9C,HI BYTE_9D,HI BYTE_9E,HI BYTE_9F
+00C1FF  C2                :                 .BYTE   HI BYTE_A0
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $00 (0) Identity Operating System Version
+                            
+                            BYTE_00:
+00C200  E000              :                 CPX     #$00
+00C202  D00A              :                 IF      EQ
+00C204  00F7              :                  BRK    #$F7
+00C206  4F5320312E323000  :                  .BYTE  "OS 1.20",0
+                                            ENDIF
+00C20E  A201              :                 LDX     #1
+00C210  60                :                 RTS
+                            
+                            BYTE_01:
+                            BYTE_02:
+                            BYTE_03:
+                            BYTE_04:
+                            BYTE_05:
+                            BYTE_06:
+                            BYTE_07:
+                            BYTE_08:
+                            BYTE_09:
+
+Portable 65xx Assembler [15.02]
+
+                            BYTE_0A:
+                            BYTE_0B:
+                            BYTE_0C:
+                            BYTE_0D:
+                            BYTE_0E:
+                            BYTE_0F:
+                            BYTE_10:
+                            BYTE_11:
+                            BYTE_12:
+                            BYTE_13:
+                            BYTE_14:
+                            BYTE_15:
+                            
+                            BYTE_75:
+                            BYTE_76:
+                            BYTE_77:
+                            BYTE_78:
+                            BYTE_79:
+                            BYTE_7A:
+                            BYTE_7B:
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $7C (124) Clear ESCAPE Condition
+                            
+                            BYTE_7C:
+00C211  A5FF              :                 LDA     $FF
+00C213  297F              :                 AND     #$7F
+00C215  85FF              :                 STA     $FF
+00C217  60                :                 RTS
+                            
+                            BYTE_7D:
+                            BYTE_7E:
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            BYTE_7F:
+                            BYTE_80:
+                            
+                            ;-------------------------------------------------------------------------------
+                            BYTE_81:
+00C218  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $82 (130) Read Machine High Order Address
+                            
+                            BYTE_82:
+00C219  A2FF              :                 LDX     #$FF            ; I/O Processor is $FFFF
+00C21B  A0FF              :                 LDY     #$FF
+00C21D  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $83 (131) Read Top of Operating System RAM Address (OWHWM)
+                            
+                            BYTE_83:
+
+Portable 65xx Assembler [15.02]
+
+00C21E  A200              :                 LDX     #$00
+00C220  AC4402            :                 LDY     OSHWM
+00C223  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $84 (132) Read Bottom of Display RAM address (HIMEM)
+                            ; $85 (133) Read Bottom of Display RAM for Specific Mode
+                            
+                            BYTE_84:
+                            BYTE_85:
+00C224  A200              :                 LDX     #$00            ; Fetch from host device
+00C226  A080              :                 LDY     #$80
+00C228  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $86 (134) Read Text Cursor Position (POS and VPOS)
+                            
+                            BYTE_86:
+00C229  A200              :                 LDX     #0              ; Not implemented
+00C22B  A000              :                 LDY     #0
+00C22D  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $87 (135) Read Character at Text Cursor Position
+                            
+                            BYTE_87:
+00C22E  A200              :                 LDX     #0              ; Not implemented
+00C230  A000              :                 LDY     #0
+00C232  60                :                 RTS
+                            
+                            BYTE_88:
+                            BYTE_89:
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $8A (138) Put byte into Buffer
+                            
+                            BYTE_8A:
+00C233  98                :                 TYA
+00C234  6C2A02            : OS_INS:         JMP     (INSV)
+                            
+                            ;-------------------------------------------------------------------------------
+                            BYTE_8B:
+                            BYTE_8C:
+                            BYTE_8D:
+00C237  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $8E (142) Enter Language ROM
+                            
+                            BYTE_8E:
+00C238  08                :                 PHP
+00C239  8E8C02            :                 STX     ROM             ; Select the ROM
+00C23C  8A                :                 TXA
+00C23D  85F4              :                 STA     ROM_NUM
+
+Portable 65xx Assembler [15.02]
+
+                                            IO_BNK
+00C23F  BB                +                 .byte   $BB
+00C240  A000              :                 LDY     #0
+                                            REPEAT
+00C242  B90980            :                  LDA    $8009,Y
+00C245  F007              :                  BREAK  EQ
+00C247  20E3FF            :                  JSR    OSASCI
+00C24A  C8                :                  INY
+00C24B  4C42C2            :                 FOREVER
+00C24E  20E7FF            :                 JSR     OSNEWL
+00C251  20E7FF            :                 JSR     OSNEWL
+00C254  28                :                 PLP
+00C255  A901              :                 LDA     #1
+00C257  4C0080            :                 JMP     $8000
+                            
+                            BYTE_8F:
+                            BYTE_90:
+                            
+                            ;------------------------------------------------------------------------------
+                            ; $91 (145) Get Bytes from Buffer
+                            
+                            BYTE_91:
+00C25A  B8                :                 CLV
+00C25B  6C2C02            :                 JMP     (REMV)
+                            
+                            ;------------------------------------------------------------------------------
+                            ; $92 (146) Read a Byte from FRED area (Not implemented)
+                            
+                            BYTE_92:
+00C25E  A000              :                 LDY     #0
+00C260  60                :                 RTS
+                            
+                            ;------------------------------------------------------------------------------
+                            BYTE_93:
+                            
+                            ;------------------------------------------------------------------------------
+                            ; $94 (148) Read a Byte from JIM area (Not implemented)
+                            
+                            BYTE_94:
+00C261  A000              :                 LDY     #0
+00C263  60                :                 RTS
+                            
+                            ;------------------------------------------------------------------------------
+                            BYTE_95:
+                            
+                            ;------------------------------------------------------------------------------
+                            ; $96 (150) Read a Byte from SHEILA area (Not implemented)
+                            
+                            BYTE_96:
+00C264  A000              :                 LDY     #0
+00C266  60                :                 RTS
+                            
+                            ;------------------------------------------------------------------------------
+                            BYTE_97:
+
+Portable 65xx Assembler [15.02]
+
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $98 (152) Examine Buffer Status
+                            
+                            BYTE_98:
+00C267  2C07C1            :                 BIT     SET_V
+00C26A  6C2C02            : OS_REM:         JMP     (REMV)
+                            
+                            BYTE_99:
+                            BYTE_9A:
+                            BYTE_9B:
+                            BYTE_9C:
+                            
+                            ;------------------------------------------------------------------------------
+                            ; $9D (157) Fast BPUT
+                            
+                            BYTE_9D:
+00C26D  8A                :                 TXA
+00C26E  4CD4FF            :                 JMP     OSBPUT
+                            
+                            ; $9E (158)
+                            BYTE_9E:
+                            ; $9F (159)
+                            BYTE_9F:
+                            ; $A0 (160)
+                            BYTE_A0:
+00C271  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; OSWORD Emulation
+                            ;-------------------------------------------------------------------------------
+                            
+                            _WORD:
+00C272  48                :                 PHA
+00C273  08                :                 PHP
+00C274  85EF              :                 STA     OS_A
+00C276  86F0              :                 STX     OS_X
+00C278  84F1              :                 STY     OS_Y
+                            
+00C27A  C90E              :                 CMP     #$0E
+00C27C  B012              :                 IF      CC
+00C27E  A8                :                  TAY
+00C27F  B995C2            :                  LDA    WordLo,Y
+00C282  85FA              :                  STA    OS_WS+0
+00C284  B9A3C2            :                  LDA    WordHi,Y
+00C287  85FB              :                  STA    OS_WS+1
+00C289  A5EF              :                  LDA    OS_A
+00C28B  A4F1              :                  LDY    OS_Y
+00C28D  2003C1            :                  JSR    CALL_WS
+                                            ENDIF
+                            
+00C290  6A                :                 ROR     A
+00C291  28                :                 PLP
+00C292  2A                :                 ROL     A
+
+Portable 65xx Assembler [15.02]
+
+00C293  68                :                 PLA
+00C294  60                :                 RTS
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            WordLo:
+00C295  B10F2037          :                 .BYTE   LO WORD_00,LO WORD_01,LO WORD_02,LO WORD_03
+00C299  37373737          :                 .BYTE   LO WORD_04,LO WORD_05,LO WORD_06,LO WORD_07
+00C29D  37373737          :                 .BYTE   LO WORD_08,LO WORD_09,LO WORD_0A,LO WORD_0B
+00C2A1  3737              :                 .BYTE   LO WORD_0C,LO WORD_0D
+                            
+                            WordHi:
+00C2A3  C2C3C3C3          :                 .BYTE   HI WORD_00,HI WORD_01,HI WORD_02,HI WORD_03
+00C2A7  C3C3C3C3          :                 .BYTE   HI WORD_04,HI WORD_05,HI WORD_06,HI WORD_07
+00C2AB  C3C3C3C3          :                 .BYTE   HI WORD_08,HI WORD_09,HI WORD_0A,HI WORD_0B
+00C2AF  C3C3              :                 .BYTE   HI WORD_0C,HI WORD_0D
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $00 (0) Read Line
+                            
+                            WORD_00:
+00C2B1  A004              :                 LDY     #4              ; Copy parameters to OS_VARS
+                                            REPEAT
+00C2B3  B1F0              :                  LDA    (OS_X),Y
+00C2B5  99B102            :                  STA    MAX_LEN-2,Y
+00C2B8  88                :                  DEY
+00C2B9  C001              :                  CPY    #1
+00C2BB  D0F6              :                 UNTIL   EQ
+                            
+00C2BD  B1F0              :                 LDA     (OS_X),Y        ; And setup buffer pointer
+00C2BF  85E9              :                 STA     BUF_PTR+1
+00C2C1  88                :                 DEY
+00C2C2  B1F0              :                 LDA     (OS_X),Y
+00C2C4  85E8              :                 STA     BUF_PTR+0
+                            
+                                            REPEAT
+00C2C6  20E0FF            :                  JSR    OSRDCH
+                            
+00C2C9  C97F              :                  CMP    #DEL            ; Handle delete
+00C2CB  D00B              :                  IF     EQ
+00C2CD  C000              :                   CPY   #0
+00C2CF  F004              :                   IF    NE
+00C2D1  20EEFF            :                    JSR  OSWRCH
+00C2D4  88                :                    DEY
+                                              ENDIF
+00C2D5  4CC6C2            :                   CONTINUE
+                                             ENDIF
+                            
+00C2D8  C90D              :                  CMP    #CR             ; End of input?
+00C2DA  D008              :                  IF     EQ
+00C2DC  91E8              :                   STA   (BUF_PTR),Y     ; Yes, mark the end
+00C2DE  C8                :                   INY
+00C2DF  20E3FF            :                   JSR   OSASCI
+00C2E2  18                :                   CLC
+
+Portable 65xx Assembler [15.02]
+
+00C2E3  60                :                   RTS
+                                             ENDIF
+                            
+00C2E4  C91B              :                  CMP    #ESC            ; Escape?
+00C2E6  D002              :                  IF     EQ
+00C2E8  38                :                    SEC
+00C2E9  60                :                    RTS
+                                             ENDIF
+                            
+00C2EA  CDB402            :                  CMP    MIN_CHR         ; Acceptable character?
+00C2ED  9018              :                  IF     CS
+00C2EF  CDB502            :                   CMP   MAX_CHR
+00C2F2  9005              :                   IF    CS
+00C2F4  F003              :                    IF   NE
+00C2F6  4CC6C2            :                     CONTINUE            ; Too big?
+                                               ENDIF
+                                              ENDIF
+                            
+00C2F9  CCB302            :                   CPY   MAX_LEN         ; Fits in the buffer?
+00C2FC  B009              :                   IF    CC
+00C2FE  91E8              :                    STA  (BUF_PTR),Y     ; Just right, save it
+00C300  C8                :                    INY
+00C301  20EEFF            :                    JSR  OSWRCH          ; And display
+00C304  4CC6C2            :                    CONTINUE
+                                              ENDIF
+                                             ENDIF
+                            
+00C307  A907              :                  LDA    #BEL
+00C309  20EEFF            :                  JSR    OSWRCH
+00C30C  4CC6C2            :                 FOREVER
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $01 (1) Read System Clock
+                            
+                            WORD_01:
+00C30F  AE8302            :                 LDX     CLKIDX          ; Get current timer index
+00C312  A000              :                 LDY     #0
+                                            REPEAT                  ; And copy the current value
+00C314  BD9102            :                  LDA    TIME-1,X
+00C317  91F0              :                  STA    (OS_X),Y
+00C319  CA                :                  DEX
+00C31A  C8                :                  INY
+00C31B  C005              :                  CPY    #5
+00C31D  D0F5              :                 UNTIL   EQ
+00C31F  60                :                 RTS                     ; Done
+                            
+                            ;-------------------------------------------------------------------------------
+                            ; $02 (2) Write System Clock
+                            
+                            WORD_02:
+00C320  AD8302            :                 LDA     CLKIDX          ; Get the current timer index
+00C323  48                :                 PHA
+00C324  AA                :                 TAX
+00C325  A000              :                 LDY     #0              ; And install the new value
+
+Portable 65xx Assembler [15.02]
+
+                                            REPEAT
+00C327  B1F0              :                  LDA    (OS_X),Y
+00C329  9D9102            :                  STA    TIME-1,X
+00C32C  CA                :                  DEX
+00C32D  C8                :                  INY
+00C32E  C005              :                  CPY    #5
+00C330  D0F5              :                 UNTIL   EQ
+00C332  68                :                 PLA                     ; Ensure value used on next update
+00C333  8D8302            :                 STA     CLKIDX
+00C336  60                :                 RTS                     ; Done
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+                            WORD_03:
+                            WORD_04:
+                            WORD_05:
+                            WORD_06:
+                            WORD_07:
+                            WORD_08:
+                            WORD_09:
+                            WORD_0A:
+                            WORD_0B:
+                            WORD_0C:
+                            WORD_0D:
+00C337  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; Write character
+                            ;-------------------------------------------------------------------------------
+                            
+                            _WRCH:
+                                            ; Handle I/O redirect
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+00C338  C900              :                 CMP     #NUL            ; Ignore NUL characters
+00C33A  D001              :                 IF      EQ
+00C33C  60                :                  RTS
+                                            ENDIF
+                            
+00C33D  C97F              :                 CMP     #DEL            ; Translate DEL into BS ' ' BS
+00C33F  D012              :                 IF      EQ
+00C341  48                :                  PHA
+00C342  A908              :                  LDA    #BS
+00C344  48                :                  PHA
+00C345  2038C3            :                  JSR    _WRCH
+00C348  A920              :                  LDA    #' '
+00C34A  2038C3            :                  JSR    _WRCH
+00C34D  68                :                  PLA
+00C34E  2038C3            :                  JSR    _WRCH
+00C351  68                :                  PLA
+00C352  60                :                  RTS
+                                            ENDIF
+                            
+
+Portable 65xx Assembler [15.02]
+
+00C353  48                :                 PHA
+00C354  48                :                 PHA
+                                            REPEAT
+                                             IO_IFR                 ; Is UART ready to transmit
+00C355  0200              +                 .byte   $02,$00
+00C357  2904              :                  AND    #INT_UART_TX
+00C359  F0FA              :                 UNTIL NE
+00C35B  68                :                 PLA                     ; Yes, display the character
+                                            IO_TXD
+00C35C  0204              +                 .byte   $02,$04
+00C35E  68                :                 PLA
+00C35F  60                :                 RTS                     ; Done.
+                            
+                            ;===============================================================================
+                            ; Read Character
+                            ;-------------------------------------------------------------------------------
+                            
+                            _RDCH:
+00C360  48                :                 PHA
+00C361  8A                :                 TXA
+00C362  48                :                 PHA
+00C363  98                :                 TYA
+00C364  48                :                 PHA
+                            
+00C365  A200              :                 LDX     #BUF_KBD
+                                            REPEAT
+00C367  B8                :                  CLV
+00C368  206AC2            :                  JSR    OS_REM
+00C36B  9003              :                  BREAK  CC
+00C36D  4C67C3            :                 FOREVER
+                            
+00C370  BA                :                 TSX
+00C371  9D0301            :                 STA     STACK+3,X
+00C374  68                :                 PLA
+00C375  A8                :                 TAY
+00C376  68                :                 PLA
+00C377  AA                :                 TAX
+00C378  68                :                 PLA
+00C379  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; Filing System Emulation
+                            ;-------------------------------------------------------------------------------
+                            
+                            _FILE
+00C37A  60                :                 RTS
+                            
+                            _ARGS
+00C37B  60                :                 RTS
+                            
+                            _BGET
+00C37C  60                :                 RTS
+                            
+                            _BPUT
+
+Portable 65xx Assembler [15.02]
+
+00C37D  60                :                 RTS
+                            
+                            _GBPB
+00C37E  60                :                 RTS
+                            
+                            _FIND
+00C37F  60                :                 RTS
+                            
+                            _FSC
+00C380  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; Event Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; Generate an event
+                            
+                            EVENT:
+                            
+                            ; MOS generates events but does not actually make any use of them. The default
+                            ; handler is just an RTS.
+                            
+                            _EVNT:
+00C381  60                :                 RTS                     ; Done
+                            
+                            ; There isn't a standard entry point to generate an event so we will define one
+                            ; here.
+                            
+                            OSEVNT:
+00C382  6C2002            :                 JMP     (EVNTV)         ; Indirect thru the vector
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                            _UPT:
+00C385  60                :                 RTS
+                            
+                            _NET:
+00C386  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                            _VDU:
+00C387  60                :                 RTS
+                            
+                            _KEY:
+00C388  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; Buffer Routines
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; The following tables hold base addresses and indexes for the various buffer
+
+Portable 65xx Assembler [15.02]
+
+                            ; address. The head and tail pointer are incremented from teh IX value until it
+                            ; reaches zero.
+                            
+00C389  030A080707070707> : BUF_HI:         .BYTE   $03,$0A,$08,$07,$07,$07,$07,$07,$09
+00C392  0000C0C050607080> : BUF_LO:         .BYTE   $00,$00,$C0,$C0,$50,$60,$70,$80,$00
+00C39B  E00040C0F0F0F0F0> : BUF_IX:         .BYTE   $E0,$00,$40,$C0,$F0,$F0,$F0,$F0,$C0
+                            
+                            ;------------------------------------------------------------------------------
+                            
+                            SET_BUF_PTR:
+00C3A4  BD92C3            :                 LDA     BUF_LO,X        ; Fetch buffer base address
+00C3A7  85FA              :                 STA     OS_WS+0         ; And set OS_WS pointer
+00C3A9  BD89C3            :                 LDA     BUF_HI,X
+00C3AC  85FB              :                 STA     OS_WS+1
+00C3AE  60                :                 RTS
+                            
+                            ;------------------------------------------------------------------------------
+                            ; Insert into buffer
+                            
+                            _INS:
+00C3AF  08                :                 PHP                     ; Save flags
+00C3B0  78                :                 SEI
+00C3B1  48                :                 PHA                     ; Save A
+00C3B2  BCE102            :                 LDY     BUF_TL,X        ; Get buffer tail
+00C3B5  C8                :                 INY                     ; And bump
+00C3B6  D003              :                 IF      EQ
+00C3B8  BC9BC3            :                  LDY    BUF_IX,X
+                                            ENDIF
+00C3BB  98                :                 TYA
+00C3BC  DDD802            :                 CMP     BUF_HD,X        ; Is the buffer full?
+00C3BF  F00F              :                 IF      NE
+00C3C1  BCE102            :                  LDY    BUF_TL,X        ; No, set up for insert
+00C3C4  9DE102            :                  STA    BUF_TL,X
+00C3C7  20A4C3            :                  JSR    SET_BUF_PTR     
+00C3CA  68                :                  PLA                    ; Store A
+00C3CB  91FA              :                  STA    (OS_WS),Y
+00C3CD  28                :                  PLP
+00C3CE  18                :                  CLC                    ; Done success
+00C3CF  60                :                  RTS
+                                            ENDIF
+00C3D0  68                :                 PLA
+00C3D1  E002              :                 CPX     #BUF_URX
+00C3D3  B006              :                 IF      CC
+00C3D5  A001              :                  LDY    #1              ; Generate an event
+00C3D7  2081C3            :                  JSR    EVENT
+00C3DA  48                :                  PHA
+                                            ENDIF
+00C3DB  68                :                 PLA                     ; Restore A
+00C3DC  28                :                 PLP                     ; Restore flags
+00C3DD  38                :                 SEC                     ; Set carry
+00C3DE  60                :                 RTS                     ; Done
+                            
+                            ;------------------------------------------------------------------------------
+                            ; Peek/Remove from buffer
+
+Portable 65xx Assembler [15.02]
+
+                            
+                            _REM:
+00C3DF  08                :                 PHP
+00C3E0  78                :                 SEI
+00C3E1  BDD802            :                 LDA     BUF_HD,X        ; Get the head index
+00C3E4  DDE102            :                 CMP     BUF_TL,X        ; And compare with the tail
+00C3E7  F026              :                 IF      NE
+00C3E9  A8                :                  TAY                    ; Buffer not empty
+00C3EA  20A4C3            :                  JSR    SET_BUF_PTR     ; Get pointer to buffer
+00C3ED  B1FA              :                  LDA    (OS_WS),Y       ; And extract a character
+00C3EF  701B              :                  IF     VC
+00C3F1  48                :                   PHA                   ; Otherwise save character
+00C3F2  C8                :                   INY                   ; Bump index
+00C3F3  98                :                   TYA
+00C3F4  D003              :                   IF    EQ              ; Reached end of buffer?
+00C3F6  BD9BC3            :                    LDA  BUF_IX,X        ; Yes, wrap back to start
+                                              ENDIF
+00C3F9  9DD802            :                   STA   BUF_HD,X        ; Update head index
+00C3FC  E002              :                   CPX   #2
+00C3FE  900A              :                   IF    CS
+00C400  DDE102            :                    CMP  BUF_TL,X        ; Buffer empty?
+00C403  D005              :                    IF   EQ
+00C405  A000              :                     LDY #0              ; Generate buffer empty event
+00C407  2081C3            :                     JSR EVENT
+                                               ENDIF
+                                              ENDIF
+00C40A  68                :                   PLA                   ; Pull back character
+00C40B  A8                :                   TAY                   ; And put in result register
+                                             ENDIF
+00C40C  28                :                  PLP                    ; Restore flags
+00C40D  18                :                  CLC                    ; Buffer was not empty
+00C40E  60                :                  RTS                    ; Done.
+                                            ENDIF
+00C40F  28                :                 PLP                     ; Restore flags
+00C410  38                :                 SEC                     ; Buffer was empty
+00C411  60                :                 RTS                     ; Done.
+                            
+                            ;------------------------------------------------------------------------------
+                            ; Count/Purge Buffer
+                            
+                            _CNP:
+00C412  5007              :                 IF      VS              ; Purge selected?
+00C414  BDE102            :                  LDA    BUF_TL,X        ; Yes, copy tail to head
+00C417  9DD802            :                  STA    BUF_HD,X
+00C41A  60                :                  RTS                    ; Done
+                                            ENDIF
+                            
+00C41B  08                :                 PHP                     ; Save flags
+00C41C  78                :                 SEI                     ; Disable interrupts
+00C41D  08                :                 PHP                     ; Push flags again
+00C41E  38                :                 SEC
+00C41F  BDE102            :                 LDA     BUF_TL,X        ; Work out tail-head
+00C422  FDD802            :                 SBC     BUF_HD,X
+00C425  B004              :                 IF      CC
+
+Portable 65xx Assembler [15.02]
+
+00C427  38                :                  SEC
+00C428  FD9BC3            :                  SBC    BUF_IX,X
+                                            ENDIF
+00C42B  28                :                 PLP                     ; Pull back flags
+00C42C  9006              :                 IF      CS              ; Bytes used or left?
+00C42E  18                :                  CLC                    ; Work out bytes used
+00C42F  7D92C3            :                  ADC    BUF_LO,X
+00C432  49FF              :                  EOR    #$FF
+                                            ENDIF
+00C434  A000              :                 LDY     #0
+00C436  AA                :                 TAX                     ; Put result in X
+00C437  28                :                 PLP                     ; Recover flags
+00C438  60                :                 RTS                     ; Done
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                            _IND1
+00C439  60                :                 RTS
+                            
+                            _IND2
+00C43A  60                :                 RTS
+                            
+                            _IND3
+00C43B  60                :                 RTS
+                            
+                            ;===============================================================================
+                            ; Interrupt Request Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            IRQ:
+00C43C  D8                :                 CLD
+00C43D  85FC              :                 STA     IRQ_TMP         ; Save the accumulator
+00C43F  68                :                 PLA                     ; And recover the flags
+00C440  48                :                 PHA
+00C441  2910              :                 AND     #1<<B           ; Hardware interrupt?
+00C443  D003              :                 IF      EQ
+00C445  6C0402            :                  JMP    (IRQV1)         ; And go to handler
+                                            ENDIF
+                            
+00C448  8A                :                 TXA
+00C449  48                :                 PHA                     ; No software interrupt
+00C44A  BA                :                 TSX
+00C44B  BD0301            :                 LDA     STACK+3,X       ; Work out program counter
+00C44E  38                :                 SEC
+00C44F  E901              :                 SBC     #1
+00C451  85FD              :                 STA     OS_PTR+0
+00C453  BD0401            :                 LDA     STACK+4,X
+00C456  E900              :                 SBC     #0
+00C458  85FE              :                 STA     OS_PTR+1
+                            
+00C45A  68                :                 PLA
+00C45B  AA                :                 TAX
+00C45C  A5FC              :                 LDA     IRQ_TMP
+
+Portable 65xx Assembler [15.02]
+
+00C45E  6C0202            :                 JMP     (BRKV)
+                            
+                            ;===============================================================================
+                            ; Default IRQ Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            _IRQ1:
+00C461  8A                :                 TXA                     ; Save users X and Y
+00C462  48                :                 PHA
+00C463  98                :                 TYA
+00C464  48                :                 PHA
+                            
+                            ;------------------------------------------------------------------------------
+                            
+                                            IO_IFR                  ; Get the interrupt source
+00C465  0200              +                 .byte   $02,$00
+00C467  2901              :                 AND     #INT_100HZ      ; Is it a Timer?
+00C469  F02D              :                 IF      NE
+                                             IO_IFC                 ; Yes, clear flag
+00C46B  0206              +                 .byte   $02,$06
+                            
+00C46D  AD8302            :                  LDA    CLKIDX          ; Get current index
+00C470  AA                :                  TAX
+00C471  490F              :                  EOR    #$0F            ; Work out index for new value
+00C473  48                :                  PHA
+00C474  A8                :                  TAY
+                            
+00C475  38                :                  SEC                    ; Increment old into new time
+                                             REPEAT
+00C476  BD9102            :                   LDA   TIME-1,X
+00C479  6900              :                   ADC   #0
+00C47B  999102            :                   STA   TIME-1,Y
+00C47E  CA                :                   DEX
+00C47F  F003              :                   BREAK EQ
+00C481  88                :                   DEY
+00C482  D0F2              :                  UNTIL EQ
+                            
+00C484  68                :                  PLA                    ; And update index
+00C485  8D8302            :                  STA    CLKIDX
+                            
+00C488  ADB102            :                  LDA    INKEY_CNT+0     ; Is INKEY count LSB zero?
+00C48B  D008              :                  IF     EQ
+00C48D  ADB202            :                   LDA   INKEY_CNT+1     ; Is the MSB also zero?
+00C490  F006              :                   BEQ   .Skip           ; Yes, nothing to do
+00C492  CEB202            :                   DEC   INKEY_CNT+1     ; No, decrement MSB
+                                             ENDIF
+00C495  CEB102            :                  DEC    INKEY_CNT+0     ; Decrement LSB
+                            .Skip:
+                            
+                                             ; Decrement other timers
+                            
+                                            ENDIF
+                            
+                            ;------------------------------------------------------------------------------
+
+Portable 65xx Assembler [15.02]
+
+                            
+                                            IO_IFR
+00C498  0200              +                 .byte   $02,$00
+00C49A  2902              :                 AND     #INT_UART_RX    ; Is it a UART RX?
+00C49C  F007              :                 IF      NE
+                                             IO_RXD                 ; Yes, read the keyboard
+00C49E  0205              +                 .byte   $02,$05
+00C4A0  A200              :                  LDX    #BUF_KBD        ; And insert into buffer
+00C4A2  2034C2            :                  JSR    OS_INS
+                                            ENDIF
+                            
+                            ;------------------------------------------------------------------------------
+                            
+00C4A5  68                :                 PLA                     ; Restore users X & Y
+00C4A6  A8                :                 TAY
+00C4A7  68                :                 PLA
+00C4A8  AA                :                 TAX
+                            
+00C4A9  6C0602            :                 JMP     (IRQV2)         ; Indirect thru second vector
+                            
+                            _IRQ2:
+00C4AC  A5FC              :                 LDA     IRQ_TMP         ; Restore the accumulator
+00C4AE  40                :                 RTI                     ; All done.
+                            
+                            ;===============================================================================
+                            ; Default BRK Handler
+                            ;-------------------------------------------------------------------------------
+                            
+                            _BRK:
+00C4AF  A000              :                 LDY     #0              ; Print the error message
+                                            REPEAT
+00C4B1  B1FD              :                  LDA    (OS_PTR),Y
+00C4B3  F007              :                  BREAK  EQ
+00C4B5  20E3FF            :                  JSR    OSASCI
+00C4B8  C8                :                  INY
+00C4B9  4CB1C4            :                 FOREVER
+00C4BC  20E7FF            :                 JSR     OSNEWL          ; And a couple of blank lines
+00C4BF  20E7FF            :                 JSR     OSNEWL
+                            
+00C4C2  18                :                 CLC                     ; Then re-enter the language
+00C4C3  4C38C2            :                 JMP     BYTE_8E
+                            
+                            ;===============================================================================
+                            ; Vectors
+                            ;-------------------------------------------------------------------------------
+                            
+                                            .ORG    $FFC8
+                            
+00FFC8  4C60C3            : NVRDCH:         JMP     _RDCH           ; $FFC8
+00FFCB  4C38C3            : NVWRCH:         JMP     _WRCH           ; $FFCB
+                            
+00FFCE  6C1C02            : OSFIND:         JMP     (FINDV)         ; $FFCE
+00FFD1  6C1A02            : OSGBPB:         JMP     (GBPBV)         ; $FFD1
+00FFD4  6C1802            : OSBPUT:         JMP     (BPUTV)         ; $FFD4
+
+Portable 65xx Assembler [15.02]
+
+00FFD7  6C1602            : OSBGET:         JMP     (BGETV)         ; $FFD7
+00FFDA  6C1402            : OSARGS:         JMP     (ARGSV)         ; $FFDA
+00FFDD  6C1202            : OSFILE          JMP     (FILEV)         ; $FFDD
+                            
+00FFE0  6C1002            : OSRDCH:         JMP     (RDCHV)         ; $FFE0
+                            
+00FFE3  C90D              : OSASCI:         CMP     #CR             ; $FFE3
+00FFE5  D007              :                 BNE     OSWRCH
+00FFE7  A90A              : OSNEWL:         LDA     #LF             ; $FFE7
+00FFE9  20EEFF            :                 JSR     OSWRCH
+00FFEC  A90D              :                 LDA     #CR
+00FFEE  6C0E02            : OSWRCH:         JMP     (WRCHV)         ; $FFEE
+00FFF1  6C0C02            : OSWORD:         JMP     (WORDV)         ; $FFF1
+00FFF4  6C0A02            : OSBYTE:         JMP     (BYTEV)         ; $FFF4
+00FFF7  6C0802            : OSCLI:          JMP     (CLIV)          ; $FFF7
+                            
+                            
+00FFFA  000D              :                 .WORD   NMI
+00FFFC  00C0              :                 .WORD   RES
+00FFFE  3CC4              :                 .WORD   IRQ
+                            
+                                            .END
+
+
+Portable 65xx Assembler [15.02]
+
+Symbol Table
+
+ARGSV                            00000214  | BUF_KBD                          00000000 
+B                                00000004  | C                                00000000 
+BASIC_ROM                        0000024B  | NUL                              00000000 
+BEL                              00000007  | __6501__                         00000000 
+BGETV                            00000216  | __65816__                        00000000 
+BPUTV                            00000218  | __65832__                        00000000 
+BRKV                             00000202  | __65C02__                        00000000 
+BS                               00000008  | __65SC02__                       00000000 
+BUF_HD                           000002D8  | BUF_UTX                          00000001 
+BUF_HI                           0000C389  | INT_100HZ                        00000001 
+BUF_IX                           0000C39B  | Z                                00000001 
+BUF_KBD                          00000000  | __6502__                         00000001 
+BUF_LO                           0000C392  | BUF_URX                          00000002 
+BUF_PRN                          00000003  | I                                00000002 
+BUF_PTR                          000000E8  | INT_UART_RX                      00000002 
+BUF_SN0                          00000004  | BUF_PRN                          00000003 
+BUF_SN1                          00000005  | D                                00000003 
+BUF_SN2                          00000006  | B                                00000004 
+BUF_SN3                          00000007  | BUF_SN0                          00000004 
+BUF_SPH                          00000008  | INT_UART_TX                      00000004 
+BUF_TL                           000002E1  | BUF_SN1                          00000005 
+BUF_URX                          00000002  | BUF_SN2                          00000006 
+BUF_UTX                          00000001  | V                                00000006 
+BYTEV                            0000020A  | BEL                              00000007 
+BYTE_00                          0000C200  | BUF_SN3                          00000007 
+BYTE_01                          0000C211  | N                                00000007 
+BYTE_02                          0000C211  | BS                               00000008 
+BYTE_03                          0000C211  | BUF_SPH                          00000008 
+BYTE_04                          0000C211  | HT                               00000009 
+BYTE_05                          0000C211  | LF                               0000000A 
+BYTE_06                          0000C211  | CR                               0000000D 
+BYTE_07                          0000C211  | ESC                              0000001B 
+BYTE_08                          0000C211  | DEL                              0000007F 
+BYTE_09                          0000C211  | BUF_PTR                          000000E8 
+BYTE_0A                          0000C211  | OS_A                             000000EF 
+BYTE_0B                          0000C211  | OS_X                             000000F0 
+BYTE_0C                          0000C211  | OS_Y                             000000F1 
+BYTE_0D                          0000C211  | ROM_NUM                          000000F4 
+BYTE_0E                          0000C211  | OS_WS                            000000FA 
+BYTE_0F                          0000C211  | IRQ_TMP                          000000FC 
+BYTE_10                          0000C211  | OS_PTR                           000000FD 
+BYTE_11                          0000C211  | ESCFLG                           000000FF 
+BYTE_12                          0000C211  | STACK                            00000100 
+BYTE_13                          0000C211  | USERV                            00000200 
+BYTE_14                          0000C211  | BRKV                             00000202 
+BYTE_15                          0000C211  | IRQV1                            00000204 
+BYTE_75                          0000C211  | IRQV2                            00000206 
+BYTE_76                          0000C211  | CLIV                             00000208 
+BYTE_77                          0000C211  | BYTEV                            0000020A 
+BYTE_78                          0000C211  | WORDV                            0000020C 
+BYTE_79                          0000C211  | WRCHV                            0000020E 
+BYTE_7A                          0000C211  | RDCHV                            00000210 
+
+Portable 65xx Assembler [15.02]
+
+BYTE_7B                          0000C211  | FILEV                            00000212 
+BYTE_7C                          0000C211  | ARGSV                            00000214 
+BYTE_7D                          0000C218  | BGETV                            00000216 
+BYTE_7E                          0000C218  | BPUTV                            00000218 
+BYTE_7F                          0000C218  | GBPBV                            0000021A 
+BYTE_80                          0000C218  | FINDV                            0000021C 
+BYTE_81                          0000C218  | FSCV                             0000021E 
+BYTE_82                          0000C219  | EVNTV                            00000220 
+BYTE_83                          0000C21E  | UPTV                             00000222 
+BYTE_84                          0000C224  | NETV                             00000224 
+BYTE_85                          0000C224  | VDUV                             00000226 
+BYTE_86                          0000C229  | KEYV                             00000228 
+BYTE_87                          0000C22E  | INSV                             0000022A 
+BYTE_88                          0000C233  | REMV                             0000022C 
+BYTE_89                          0000C233  | CNPV                             0000022E 
+BYTE_8A                          0000C233  | IND1V                            00000230 
+BYTE_8B                          0000C237  | IND2V                            00000232 
+BYTE_8C                          0000C237  | IND3V                            00000234 
+BYTE_8D                          0000C237  | OS_VARS                          00000236 
+BYTE_8E                          0000C238  | OSHWM_P                          00000243 
+BYTE_8F                          0000C25A  | OSHWM                            00000244 
+BYTE_90                          0000C25A  | BASIC_ROM                        0000024B 
+BYTE_91                          0000C25A  | CLKIDX                           00000283 
+BYTE_92                          0000C25E  | ROM                              0000028C 
+BYTE_93                          0000C261  | TIME                             00000292 
+BYTE_94                          0000C261  | ROM_TYPE                         000002A1 
+BYTE_95                          0000C264  | INKEY_CNT                        000002B1 
+BYTE_96                          0000C264  | MAX_LEN                          000002B3 
+BYTE_97                          0000C267  | MIN_CHR                          000002B4 
+BYTE_98                          0000C267  | MAX_CHR                          000002B5 
+BYTE_99                          0000C26D  | BUF_HD                           000002D8 
+BYTE_9A                          0000C26D  | BUF_TL                           000002E1 
+BYTE_9B                          0000C26D  | FILE_BLK                         000002EE 
+BYTE_9C                          0000C26D  | NMI                              00000D00 
+BYTE_9D                          0000C26D  | RES                              0000C000 
+BYTE_9E                          0000C271  | OS_TITLE                         0000C0AF 
+BYTE_9F                          0000C271  | VECTORS                          0000C0CD 
+BYTE_A0                          0000C271  | CALL_WS                          0000C103 
+ByteHi1                          0000C192  | SET_N                            0000C106 
+ByteHi2                          0000C1D4  | SET_V                            0000C107 
+ByteLo1                          0000C17C  | SET_NV                           0000C108 
+ByteLo2                          0000C1A8  | _USER                            0000C109 
+C                                00000000  | _CLI                             0000C10A 
+CALL_WS                          0000C103  | _BYTE                            0000C11E 
+CLIV                             00000208  | ByteLo1                          0000C17C 
+CLKIDX                           00000283  | ByteHi1                          0000C192 
+CNPV                             0000022E  | ByteLo2                          0000C1A8 
+CR                               0000000D  | ByteHi2                          0000C1D4 
+D                                00000003  | BYTE_00                          0000C200 
+DEL                              0000007F  | BYTE_01                          0000C211 
+ESC                              0000001B  | BYTE_02                          0000C211 
+ESCFLG                           000000FF  | BYTE_03                          0000C211 
+EVENT                            0000C381  | BYTE_04                          0000C211 
+EVNTV                            00000220  | BYTE_05                          0000C211 
+
+Portable 65xx Assembler [15.02]
+
+FILEV                            00000212  | BYTE_06                          0000C211 
+FILE_BLK                         000002EE  | BYTE_07                          0000C211 
+FINDV                            0000021C  | BYTE_08                          0000C211 
+FSCV                             0000021E  | BYTE_09                          0000C211 
+GBPBV                            0000021A  | BYTE_0A                          0000C211 
+HT                               00000009  | BYTE_0B                          0000C211 
+I                                00000002  | BYTE_0C                          0000C211 
+IND1V                            00000230  | BYTE_0D                          0000C211 
+IND2V                            00000232  | BYTE_0E                          0000C211 
+IND3V                            00000234  | BYTE_0F                          0000C211 
+INKEY_CNT                        000002B1  | BYTE_10                          0000C211 
+INSV                             0000022A  | BYTE_11                          0000C211 
+INT_100HZ                        00000001  | BYTE_12                          0000C211 
+INT_UART_RX                      00000002  | BYTE_13                          0000C211 
+INT_UART_TX                      00000004  | BYTE_14                          0000C211 
+IRQ                              0000C43C  | BYTE_15                          0000C211 
+IRQV1                            00000204  | BYTE_75                          0000C211 
+IRQV2                            00000206  | BYTE_76                          0000C211 
+IRQ_TMP                          000000FC  | BYTE_77                          0000C211 
+KEYV                             00000228  | BYTE_78                          0000C211 
+LF                               0000000A  | BYTE_79                          0000C211 
+MAX_CHR                          000002B5  | BYTE_7A                          0000C211 
+MAX_LEN                          000002B3  | BYTE_7B                          0000C211 
+MIN_CHR                          000002B4  | BYTE_7C                          0000C211 
+N                                00000007  | BYTE_7D                          0000C218 
+NETV                             00000224  | BYTE_7E                          0000C218 
+NMI                              00000D00  | BYTE_7F                          0000C218 
+NUL                              00000000  | BYTE_80                          0000C218 
+NVRDCH                           0000FFC8  | BYTE_81                          0000C218 
+NVWRCH                           0000FFCB  | BYTE_82                          0000C219 
+OSARGS                           0000FFDA  | BYTE_83                          0000C21E 
+OSASCI                           0000FFE3  | BYTE_84                          0000C224 
+OSBGET                           0000FFD7  | BYTE_85                          0000C224 
+OSBPUT                           0000FFD4  | BYTE_86                          0000C229 
+OSBYTE                           0000FFF4  | BYTE_87                          0000C22E 
+OSCLI                            0000FFF7  | BYTE_88                          0000C233 
+OSEVNT                           0000C382  | BYTE_89                          0000C233 
+OSFILE                           0000FFDD  | BYTE_8A                          0000C233 
+OSFIND                           0000FFCE  | OS_INS                           0000C234 
+OSGBPB                           0000FFD1  | BYTE_8B                          0000C237 
+OSHWM                            00000244  | BYTE_8C                          0000C237 
+OSHWM_P                          00000243  | BYTE_8D                          0000C237 
+OSNEWL                           0000FFE7  | BYTE_8E                          0000C238 
+OSRDCH                           0000FFE0  | BYTE_8F                          0000C25A 
+OSWORD                           0000FFF1  | BYTE_90                          0000C25A 
+OSWRCH                           0000FFEE  | BYTE_91                          0000C25A 
+OS_A                             000000EF  | BYTE_92                          0000C25E 
+OS_INS                           0000C234  | BYTE_93                          0000C261 
+OS_PTR                           000000FD  | BYTE_94                          0000C261 
+OS_REM                           0000C26A  | BYTE_95                          0000C264 
+OS_TITLE                         0000C0AF  | BYTE_96                          0000C264 
+OS_VARS                          00000236  | BYTE_97                          0000C267 
+OS_WS                            000000FA  | BYTE_98                          0000C267 
+OS_X                             000000F0  | OS_REM                           0000C26A 
+
+Portable 65xx Assembler [15.02]
+
+OS_Y                             000000F1  | BYTE_99                          0000C26D 
+RDCHV                            00000210  | BYTE_9A                          0000C26D 
+REMV                             0000022C  | BYTE_9B                          0000C26D 
+RES                              0000C000  | BYTE_9C                          0000C26D 
+ROM                              0000028C  | BYTE_9D                          0000C26D 
+ROM_NUM                          000000F4  | BYTE_9E                          0000C271 
+ROM_TYPE                         000002A1  | BYTE_9F                          0000C271 
+SET_BUF_PTR                      0000C3A4  | BYTE_A0                          0000C271 
+SET_N                            0000C106  | _WORD                            0000C272 
+SET_NV                           0000C108  | WordLo                           0000C295 
+SET_V                            0000C107  | WordHi                           0000C2A3 
+STACK                            00000100  | WORD_00                          0000C2B1 
+TIME                             00000292  | WORD_01                          0000C30F 
+UPTV                             00000222  | WORD_02                          0000C320 
+USERV                            00000200  | WORD_03                          0000C337 
+V                                00000006  | WORD_04                          0000C337 
+VDUV                             00000226  | WORD_05                          0000C337 
+VECTORS                          0000C0CD  | WORD_06                          0000C337 
+WORDV                            0000020C  | WORD_07                          0000C337 
+WORD_00                          0000C2B1  | WORD_08                          0000C337 
+WORD_01                          0000C30F  | WORD_09                          0000C337 
+WORD_02                          0000C320  | WORD_0A                          0000C337 
+WORD_03                          0000C337  | WORD_0B                          0000C337 
+WORD_04                          0000C337  | WORD_0C                          0000C337 
+WORD_05                          0000C337  | WORD_0D                          0000C337 
+WORD_06                          0000C337  | _WRCH                            0000C338 
+WORD_07                          0000C337  | _RDCH                            0000C360 
+WORD_08                          0000C337  | _FILE                            0000C37A 
+WORD_09                          0000C337  | _ARGS                            0000C37B 
+WORD_0A                          0000C337  | _BGET                            0000C37C 
+WORD_0B                          0000C337  | _BPUT                            0000C37D 
+WORD_0C                          0000C337  | _GBPB                            0000C37E 
+WORD_0D                          0000C337  | _FIND                            0000C37F 
+WRCHV                            0000020E  | _FSC                             0000C380 
+WordHi                           0000C2A3  | EVENT                            0000C381 
+WordLo                           0000C295  | _EVNT                            0000C381 
+Z                                00000001  | OSEVNT                           0000C382 
+_ARGS                            0000C37B  | _UPT                             0000C385 
+_BGET                            0000C37C  | _NET                             0000C386 
+_BPUT                            0000C37D  | _VDU                             0000C387 
+_BRK                             0000C4AF  | _KEY                             0000C388 
+_BYTE                            0000C11E  | BUF_HI                           0000C389 
+_CLI                             0000C10A  | BUF_LO                           0000C392 
+_CNP                             0000C412  | BUF_IX                           0000C39B 
+_EVNT                            0000C381  | SET_BUF_PTR                      0000C3A4 
+_FILE                            0000C37A  | _INS                             0000C3AF 
+_FIND                            0000C37F  | _REM                             0000C3DF 
+_FSC                             0000C380  | _CNP                             0000C412 
+_GBPB                            0000C37E  | _IND1                            0000C439 
+_IND1                            0000C439  | _IND2                            0000C43A 
+_IND2                            0000C43A  | _IND3                            0000C43B 
+_IND3                            0000C43B  | IRQ                              0000C43C 
+_INS                             0000C3AF  | _IRQ1                            0000C461 
+_IRQ1                            0000C461  | _IRQ1.Skip                       0000C498 
+
+Portable 65xx Assembler [15.02]
+
+_IRQ1.Skip                       0000C498  | _IRQ2                            0000C4AC 
+_IRQ2                            0000C4AC  | _BRK                             0000C4AF 
+_KEY                             0000C388  | NVRDCH                           0000FFC8 
+_NET                             0000C386  | NVWRCH                           0000FFCB 
+_RDCH                            0000C360  | OSFIND                           0000FFCE 
+_REM                             0000C3DF  | OSGBPB                           0000FFD1 
+_UPT                             0000C385  | OSBPUT                           0000FFD4 
+_USER                            0000C109  | OSBGET                           0000FFD7 
+_VDU                             0000C387  | OSARGS                           0000FFDA 
+_WORD                            0000C272  | OSFILE                           0000FFDD 
+_WRCH                            0000C338  | OSRDCH                           0000FFE0 
+__6501__                         00000000  | OSASCI                           0000FFE3 
+__6502__                         00000001  | OSNEWL                           0000FFE7 
+__65816__                        00000000  | OSWRCH                           0000FFEE 
+__65832__                        00000000  | OSWORD                           0000FFF1 
+__65C02__                        00000000  | OSBYTE                           0000FFF4 
+__65SC02__                       00000000  | OSCLI                            0000FFF7 

@@ -1,0 +1,8 @@
+Global Symbol Map
+
+
+
+Sections:
+
+.code            : 0000C000 - 0000C4C5 in mos.obj
+                   0000FFC8 - 0000FFFF in mos.obj
