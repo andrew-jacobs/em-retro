@@ -1,5 +1,5 @@
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
                             ;===============================================================================
                             ;  __  __  ___  ____    _____                 _       _   _
@@ -10,14 +10,14 @@ Portable 65xx Assembler [15.02]
                             ;
                             ; An Extended Acorn MOS Emulation
                             ;-------------------------------------------------------------------------------
-                            ; Copyright (C)2013-2015 HandCoded Software Ltd.
+                            ; Copyright (C)2014-2016 HandCoded Software Ltd.
                             ; All rights reserved.
                             ;
                             ; This work is made available under the terms of the Creative Commons
-                            ; Attribution-NonCommercial 2.0 license. Open the following URL to see the
-                            ; details.
+                            ; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+                            ; following URL to see the details.
                             ;
-                            ; http://creativecommons.org/licenses/by-nc/2.0/
+                            ; http://creativecommons.org/licenses/by-nc-sa/4.0/
                             ;-------------------------------------------------------------------------------
                             ;
                             ; Notes:
@@ -27,8 +27,6 @@ Portable 65xx Assembler [15.02]
                             ; Revision History:
                             ;
                             ; 2013-04-11 AJ Initial version
-                            ;-------------------------------------------------------------------------------
-                            ; $Id: mos.asm 48 2015-07-12 22:50:54Z andrew $
                             ;-------------------------------------------------------------------------------
                             
                                             .include "../em-6502.inc"
@@ -55,11 +53,11 @@ Portable 65xx Assembler [15.02]
                             ; Clear interrupt flags specified by A
                             
                             IO_IFC          .macro
-
-Portable 65xx Assembler [15.02]
-
                                             .byte   $02,$06
                                             .endm
+
+Portable 65xx Assembler [16.03]
+
                             
                             ; Read the interrupt enables into A
                             
@@ -112,11 +110,11 @@ Portable 65xx Assembler [15.02]
                             ;-------------------------------------------------------------------------------
                             
         00000000          = NUL             .EQU    $00
-
-Portable 65xx Assembler [15.02]
-
         00000007          = BEL             .EQU    $07
         00000008          = BS              .EQU    $08
+
+Portable 65xx Assembler [16.03]
+
         00000009          = HT              .EQU    $09
         0000000D          = CR              .EQU    $0D
         0000000A          = LF              .EQU    $0A
@@ -169,11 +167,11 @@ Portable 65xx Assembler [15.02]
         00000202          = BRKV            .EQU    $0202
         00000204          = IRQV1           .EQU    $0204
         00000206          = IRQV2           .EQU    $0206
-
-Portable 65xx Assembler [15.02]
-
         00000208          = CLIV            .EQU    $0208
         0000020A          = BYTEV           .EQU    $020A
+
+Portable 65xx Assembler [16.03]
+
         0000020C          = WORDV           .EQU    $020C
         0000020E          = WRCHV           .EQU    $020E
         00000210          = RDCHV           .EQU    $0210
@@ -226,11 +224,11 @@ Portable 65xx Assembler [15.02]
                             ; A00-AFF Cassette buffer
                             ; B00-BFF Soft Key Buffer
                             ; C00-CFF Font
-
-Portable 65xx Assembler [15.02]
-
                             
                             ;-------------------------------------------------------------------------------
+
+Portable 65xx Assembler [16.03]
+
                             
         00000D00          = NMI             .EQU    $0D00           ; Fixed NMI handler location
                             
@@ -283,11 +281,11 @@ Portable 65xx Assembler [15.02]
 00C044  CA                :                  DEX
 00C045  10F7              :                 UNTIL   MI
                             
-
-Portable 65xx Assembler [15.02]
-
 00C047  A208              :                 LDX     #8              ; Clear all buffers
                                             REPEAT
+
+Portable 65xx Assembler [16.03]
+
 00C049  BD9BC3            :                  LDA    BUF_IX,X
 00C04C  9DD802            :                  STA    BUF_HD,X
 00C04F  9DE102            :                  STA    BUF_TL,X
@@ -340,11 +338,11 @@ Portable 65xx Assembler [15.02]
 00C096  8D4B02            :                    STA  BASIC_ROM
                                               ENDIF
                                              ENDIF
-
-Portable 65xx Assembler [15.02]
-
 00C099  CA                :                  DEX
 00C09A  10EE              :                 UNTIL   MI
+
+Portable 65xx Assembler [16.03]
+
                             
                             ;-------------------------------------------------------------------------------
                             
@@ -397,11 +395,11 @@ Portable 65xx Assembler [15.02]
                             
                             ; Useful bytes for setting the N & V flags with a BIT
                             
-
-Portable 65xx Assembler [15.02]
-
 00C106  80                : SET_N:          .BYTE   $80
 00C107  40                : SET_V:          .BYTE   $40
+
+Portable 65xx Assembler [16.03]
+
 00C108  C0                : SET_NV:         .BYTE   $C0
                             
                             ;===============================================================================
@@ -454,11 +452,11 @@ Portable 65xx Assembler [15.02]
 00C140  68                :                  PLA
 00C141  60                :                  RTS
                                             ENDIF
-
-Portable 65xx Assembler [15.02]
-
                             
 00C142  C975              :                 CMP     #$75
+
+Portable 65xx Assembler [16.03]
+
 00C144  901B              :                 IF      CS              ; OSBYTE $75-$A0
 00C146  C9A1              :                  CMP    #$A1
 00C148  B017              :                  IF     CC
@@ -511,11 +509,11 @@ Portable 65xx Assembler [15.02]
                             ByteHi1:
 00C192  C2C2C2C2          :                 .BYTE   HI BYTE_00,HI BYTE_01,HI BYTE_02,HI BYTE_03
 00C196  C2C2C2C2          :                 .BYTE   HI BYTE_04,HI BYTE_05,HI BYTE_06,HI BYTE_07
-
-Portable 65xx Assembler [15.02]
-
 00C19A  C2C2C2C2          :                 .BYTE   HI BYTE_08,HI BYTE_09,HI BYTE_0A,HI BYTE_0B
 00C19E  C2C2C2C2          :                 .BYTE   HI BYTE_0C,HI BYTE_0D,HI BYTE_0E,HI BYTE_0F
+
+Portable 65xx Assembler [16.03]
+
 00C1A2  C2C2C2C2          :                 .BYTE   HI BYTE_10,HI BYTE_11,HI BYTE_12,HI BYTE_13
 00C1A6  C2C2              :                 .BYTE   HI BYTE_14,HI BYTE_15
                             
@@ -568,11 +566,11 @@ Portable 65xx Assembler [15.02]
                             BYTE_07:
                             BYTE_08:
                             BYTE_09:
-
-Portable 65xx Assembler [15.02]
-
                             BYTE_0A:
                             BYTE_0B:
+
+Portable 65xx Assembler [16.03]
+
                             BYTE_0C:
                             BYTE_0D:
                             BYTE_0E:
@@ -625,11 +623,11 @@ Portable 65xx Assembler [15.02]
                             ; $83 (131) Read Top of Operating System RAM Address (OWHWM)
                             
                             BYTE_83:
-
-Portable 65xx Assembler [15.02]
-
 00C21E  A200              :                 LDX     #$00
 00C220  AC4402            :                 LDY     OSHWM
+
+Portable 65xx Assembler [16.03]
+
 00C223  60                :                 RTS
                             
                             ;-------------------------------------------------------------------------------
@@ -682,11 +680,11 @@ Portable 65xx Assembler [15.02]
 00C239  8E8C02            :                 STX     ROM             ; Select the ROM
 00C23C  8A                :                 TXA
 00C23D  85F4              :                 STA     ROM_NUM
-
-Portable 65xx Assembler [15.02]
-
                                             IO_BNK
 00C23F  BB                +                 .byte   $BB
+
+Portable 65xx Assembler [16.03]
+
 00C240  A000              :                 LDY     #0
                                             REPEAT
 00C242  B90980            :                  LDA    $8009,Y
@@ -739,11 +737,11 @@ Portable 65xx Assembler [15.02]
                             
                             ;------------------------------------------------------------------------------
                             BYTE_97:
-
-Portable 65xx Assembler [15.02]
-
                             
                             ;-------------------------------------------------------------------------------
+
+Portable 65xx Assembler [16.03]
+
                             ; $98 (152) Examine Buffer Status
                             
                             BYTE_98:
@@ -796,11 +794,11 @@ Portable 65xx Assembler [15.02]
 00C290  6A                :                 ROR     A
 00C291  28                :                 PLP
 00C292  2A                :                 ROL     A
-
-Portable 65xx Assembler [15.02]
-
 00C293  68                :                 PLA
 00C294  60                :                 RTS
+
+Portable 65xx Assembler [16.03]
+
                             
                             ;-------------------------------------------------------------------------------
                             
@@ -853,11 +851,11 @@ Portable 65xx Assembler [15.02]
 00C2DE  C8                :                   INY
 00C2DF  20E3FF            :                   JSR   OSASCI
 00C2E2  18                :                   CLC
-
-Portable 65xx Assembler [15.02]
-
 00C2E3  60                :                   RTS
                                              ENDIF
+
+Portable 65xx Assembler [16.03]
+
                             
 00C2E4  C91B              :                  CMP    #ESC            ; Escape?
 00C2E6  D002              :                  IF     EQ
@@ -910,11 +908,11 @@ Portable 65xx Assembler [15.02]
 00C323  48                :                 PHA
 00C324  AA                :                 TAX
 00C325  A000              :                 LDY     #0              ; And install the new value
-
-Portable 65xx Assembler [15.02]
-
                                             REPEAT
 00C327  B1F0              :                  LDA    (OS_X),Y
+
+Portable 65xx Assembler [16.03]
+
 00C329  9D9102            :                  STA    TIME-1,X
 00C32C  CA                :                  DEX
 00C32D  C8                :                  INY
@@ -967,11 +965,11 @@ Portable 65xx Assembler [15.02]
 00C352  60                :                  RTS
                                             ENDIF
                             
-
-Portable 65xx Assembler [15.02]
-
 00C353  48                :                 PHA
 00C354  48                :                 PHA
+
+Portable 65xx Assembler [16.03]
+
                                             REPEAT
                                              IO_IFR                 ; Is UART ready to transmit
 00C355  0200              +                 .byte   $02,$00
@@ -1024,11 +1022,11 @@ Portable 65xx Assembler [15.02]
 00C37C  60                :                 RTS
                             
                             _BPUT
-
-Portable 65xx Assembler [15.02]
-
 00C37D  60                :                 RTS
                             
+
+Portable 65xx Assembler [16.03]
+
                             _GBPB
 00C37E  60                :                 RTS
                             
@@ -1081,11 +1079,11 @@ Portable 65xx Assembler [15.02]
                             ;-------------------------------------------------------------------------------
                             
                             ; The following tables hold base addresses and indexes for the various buffer
-
-Portable 65xx Assembler [15.02]
-
                             ; address. The head and tail pointer are incremented from teh IX value until it
                             ; reaches zero.
+
+Portable 65xx Assembler [16.03]
+
                             
 00C389  030A080707070707> : BUF_HI:         .BYTE   $03,$0A,$08,$07,$07,$07,$07,$07,$09
 00C392  0000C0C050607080> : BUF_LO:         .BYTE   $00,$00,$C0,$C0,$50,$60,$70,$80,$00
@@ -1138,11 +1136,11 @@ Portable 65xx Assembler [15.02]
                             
                             ;------------------------------------------------------------------------------
                             ; Peek/Remove from buffer
-
-Portable 65xx Assembler [15.02]
-
                             
                             _REM:
+
+Portable 65xx Assembler [16.03]
+
 00C3DF  08                :                 PHP
 00C3E0  78                :                 SEI
 00C3E1  BDD802            :                 LDA     BUF_HD,X        ; Get the head index
@@ -1195,11 +1193,11 @@ Portable 65xx Assembler [15.02]
 00C41F  BDE102            :                 LDA     BUF_TL,X        ; Work out tail-head
 00C422  FDD802            :                 SBC     BUF_HD,X
 00C425  B004              :                 IF      CC
-
-Portable 65xx Assembler [15.02]
-
 00C427  38                :                  SEC
 00C428  FD9BC3            :                  SBC    BUF_IX,X
+
+Portable 65xx Assembler [16.03]
+
                                             ENDIF
 00C42B  28                :                 PLP                     ; Pull back flags
 00C42C  9006              :                 IF      CS              ; Bytes used or left?
@@ -1252,11 +1250,11 @@ Portable 65xx Assembler [15.02]
 00C45A  68                :                 PLA
 00C45B  AA                :                 TAX
 00C45C  A5FC              :                 LDA     IRQ_TMP
-
-Portable 65xx Assembler [15.02]
-
 00C45E  6C0202            :                 JMP     (BRKV)
                             
+
+Portable 65xx Assembler [16.03]
+
                             ;===============================================================================
                             ; Default IRQ Handler
                             ;-------------------------------------------------------------------------------
@@ -1309,11 +1307,11 @@ Portable 65xx Assembler [15.02]
                                             ENDIF
                             
                             ;------------------------------------------------------------------------------
-
-Portable 65xx Assembler [15.02]
-
                             
                                             IO_IFR
+
+Portable 65xx Assembler [16.03]
+
 00C498  0200              +                 .byte   $02,$00
 00C49A  2902              :                 AND     #INT_UART_RX    ; Is it a UART RX?
 00C49C  F007              :                 IF      NE
@@ -1366,11 +1364,11 @@ Portable 65xx Assembler [15.02]
 00FFCE  6C1C02            : OSFIND:         JMP     (FINDV)         ; $FFCE
 00FFD1  6C1A02            : OSGBPB:         JMP     (GBPBV)         ; $FFD1
 00FFD4  6C1802            : OSBPUT:         JMP     (BPUTV)         ; $FFD4
-
-Portable 65xx Assembler [15.02]
-
 00FFD7  6C1602            : OSBGET:         JMP     (BGETV)         ; $FFD7
 00FFDA  6C1402            : OSARGS:         JMP     (ARGSV)         ; $FFDA
+
+Portable 65xx Assembler [16.03]
+
 00FFDD  6C1202            : OSFILE          JMP     (FILEV)         ; $FFDD
                             
 00FFE0  6C1002            : OSRDCH:         JMP     (RDCHV)         ; $FFE0
@@ -1393,7 +1391,7 @@ Portable 65xx Assembler [15.02]
                                             .END
 
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
 Symbol Table
 
@@ -1450,7 +1448,7 @@ BYTE_78                          0000C211  | WORDV                            00
 BYTE_79                          0000C211  | WRCHV                            0000020E 
 BYTE_7A                          0000C211  | RDCHV                            00000210 
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
 BYTE_7B                          0000C211  | FILEV                            00000212 
 BYTE_7C                          0000C211  | ARGSV                            00000214 
@@ -1507,7 +1505,7 @@ ESCFLG                           000000FF  | BYTE_03                          00
 EVENT                            0000C381  | BYTE_04                          0000C211 
 EVNTV                            00000220  | BYTE_05                          0000C211 
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
 FILEV                            00000212  | BYTE_06                          0000C211 
 FILE_BLK                         000002EE  | BYTE_07                          0000C211 
@@ -1564,7 +1562,7 @@ OS_VARS                          00000236  | BYTE_97                          00
 OS_WS                            000000FA  | BYTE_98                          0000C267 
 OS_X                             000000F0  | OS_REM                           0000C26A 
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
 OS_Y                             000000F1  | BYTE_99                          0000C26D 
 RDCHV                            00000210  | BYTE_9A                          0000C26D 
@@ -1621,7 +1619,7 @@ _IND3                            0000C43B  | IRQ                              00
 _INS                             0000C3AF  | _IRQ1                            0000C461 
 _IRQ1                            0000C461  | _IRQ1.Skip                       0000C498 
 
-Portable 65xx Assembler [15.02]
+Portable 65xx Assembler [16.03]
 
 _IRQ1.Skip                       0000C498  | _IRQ2                            0000C4AC 
 _IRQ2                            0000C4AC  | _BRK                             0000C4AF 

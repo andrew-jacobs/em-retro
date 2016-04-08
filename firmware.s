@@ -7,20 +7,14 @@
 ;
 ; A Retro Device Emulator
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2015 HandCoded Software Ltd.
+; Copyright (C)2014-2016 HandCoded Software Ltd.
 ; All rights reserved.
 ;
-; This software is the confidential and proprietary information of HandCoded
-; Software Ltd. ("Confidential Information").  You shall not disclose such
-; Confidential Information and shall use it only in accordance with the terms
-; of the license agreement you entered into with HandCoded Software.
+; This work is made available under the terms of the Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+; following URL to see the details.
 ;
-; HANDCODED SOFTWARE MAKES NO REPRESENTATIONS OR WARRANTIES ABOUT THE
-; SUITABILITY OF THE SOFTWARE, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
-; LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-; PARTICULAR PURPOSE, OR NON-INFRINGEMENT. HANDCODED SOFTWARE SHALL NOT BE
-; LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING
-; OR DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
 ;-------------------------------------------------------------------------------
 ;
 ; Notes:
@@ -29,8 +23,6 @@
 ; Revision History:
 ;
 ; 2014-10-11 AJ Initial version
-;-------------------------------------------------------------------------------
-; $Id: firmware.s 51 2015-09-16 17:30:15Z andrew $
 ;-------------------------------------------------------------------------------
 
         .include "hardware.inc"
@@ -346,7 +338,7 @@ __reset:
         .asciz  " Select an emulation:"
 
         clr     w8                      ; Start with item 0
-        mov     #8,w9                   ; .. of 8
+        mov     #9,w9                   ; .. of 9
 ShowMenu:
         add     w8,#12,w0               ; Work out where it will be displayed
         mov     #4,w1
@@ -443,6 +435,7 @@ ShowItem:
         bra     5f
         bra     6f
         bra     7f
+	bra	8f
 
 0:      rcall   PutStr
         .asciz  "NS SC/MP II"
@@ -475,6 +468,10 @@ ShowItem:
 7:      rcall   PutStr
         .asciz  "Zilog Z80"
         return
+	
+8:	rcall	PutStr
+	.asciz	"Partition Manager"
+	return
 
 ; Output an extended description for each item
 
@@ -489,6 +486,7 @@ ShowDesc:
         bra     5f
         bra     6f
         bra     7f
+	bra	8f
 
 0:      rcall   PutStr
         .asciz  "[44K RAM + NIBL @ 4MHz]"
@@ -521,6 +519,8 @@ ShowDesc:
 7:      rcall   PutStr
         .asciz  "[44K RAM @ 1MHz]"
         return
+	
+8:	return
 
 ;-------------------------------------------------------------------------------
 
@@ -552,6 +552,8 @@ BootDevice:
         goto    EM_6809
         goto    EM_8080
         goto    EM_Z80
+	
+	goto	PartitionManager
 
 ;===============================================================================
 ; VT200 Control Sequences
@@ -935,6 +937,14 @@ SdWaitSlow:
 SdIdleSlow:
         mov     #0xff,w0
         bra     SpiSlow
+	
+;===============================================================================
+; Partition Manager
+;-------------------------------------------------------------------------------
+	
+PartitionManager:
+	
+	reset
 
 ;===============================================================================
 ; Micro-Cycle Timer Interrupt

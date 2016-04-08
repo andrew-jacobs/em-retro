@@ -3,7 +3,7 @@
     <type>com.microchip.mplab.nbide.embedded.makeproject</type>
     <configuration>
         <data xmlns="http://www.netbeans.org/ns/make-project/1">
-            <name>EM-RETRO</name>
+            <name>em-retro</name>
             <creation-uuid>b07788ff-520d-4da1-88f5-96f1697a4ee7</creation-uuid>
             <make-project-type>0</make-project-type>
             <c-extensions/>

@@ -7,20 +7,14 @@
 ;
 ;
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014 HandCoded Software Ltd.
+; Copyright (C)2014-2016 HandCoded Software Ltd.
 ; All rights reserved.
 ;
-; This software is the confidential and proprietary information of HandCoded
-; Software Ltd. ("Confidential Information").  You shall not disclose such
-; Confidential Information and shall use it only in accordance with the terms
-; of the license agreement you entered into with HandCoded Software.
+; This work is made available under the terms of the Creative Commons
+; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+; following URL to see the details.
 ;
-; HANDCODED SOFTWARE MAKES NO REPRESENTATIONS OR WARRANTIES ABOUT THE
-; SUITABILITY OF THE SOFTWARE, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
-; LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
-; PARTICULAR PURPOSE, OR NON-INFRINGEMENT. HANDCODED SOFTWARE SHALL NOT BE
-; LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING
-; OR DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
 ;-------------------------------------------------------------------------------
 ;
 ; Notes:
@@ -34,8 +28,6 @@
 ; Revision History:
 ;
 ; 2014-12-13 AJ Initial version
-;-------------------------------------------------------------------------------
-; $Id: em-6800.inc 43 2015-06-26 20:15:55Z andrew $
 ;-------------------------------------------------------------------------------
 
 ;===============================================================================

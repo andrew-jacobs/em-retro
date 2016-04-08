@@ -7,14 +7,14 @@
 ;
 ; An Extended Acorn MOS Emulation
 ;-------------------------------------------------------------------------------
-; Copyright (C)2013-2015 HandCoded Software Ltd.
+; Copyright (C)2014-2016 HandCoded Software Ltd.
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
-; Attribution-NonCommercial 2.0 license. Open the following URL to see the
-; details.
+; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+; following URL to see the details.
 ;
-; http://creativecommons.org/licenses/by-nc/2.0/
+; http://creativecommons.org/licenses/by-nc-sa/4.0/
 ;-------------------------------------------------------------------------------
 ;
 ; Notes:
@@ -24,8 +24,6 @@
 ; Revision History:
 ;
 ; 2013-04-11 AJ Initial version
-;-------------------------------------------------------------------------------
-; $Id: mos.asm 48 2015-07-12 22:50:54Z andrew $
 ;-------------------------------------------------------------------------------
 
 		.include "../em-6502.inc"

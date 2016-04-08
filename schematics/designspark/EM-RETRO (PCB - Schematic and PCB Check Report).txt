@@ -1,0 +1,19 @@
+Schematic and PCB Check Report
+------------------------------
+
+Report File:        C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO (PCB - Schematic and PCB Check Report).txt
+Report Written:     Saturday, April 02, 2016
+Project Path:       C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO.prj
+Design Path:        C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO.pcb
+Design Title:       
+Created:            25/03/2016 23:12:41
+Last Saved:         26/03/2016 00:38:36
+Editing Time:       101 min
+Units:              thou (precision 0)
+
+
+Checking integrity of Schematic and Pcb designs in project "EM-RETRO"
+=====================================================================
+
+
+End Of Report.

@@ -1,0 +1,29 @@
+Forward Design Changes Report
+-----------------------------
+
+Report File:        C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO (PCB - Forward Design Changes Report).txt
+Report Written:     Saturday, April 02, 2016
+Project Path:       C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO.prj
+Design Path:        C:\OpenSource\MPLABX\em-retro\schematics\designspark\EM-RETRO.pcb
+Design Title:       
+Created:            25/03/2016 23:12:41
+Last Saved:         02/04/2016 14:35:27
+Editing Time:       101 min
+Units:              thou (precision 0)
+
+Changed component reference "J1" from component "826936-6", package "CON6_1X6_P100UM_HDR" to component "ICSP_HDR", package "DSC".
+
+Added net "RESB".
+Added net "PGD".
+Added net "PGC".
+
+Connected pin "IC1-1" to net "RESB".
+Connected pin "IC1-28" to net "GND".
+Connected pin "J1-1" to net "RESB".
+Connected pin "J1-2" to net "3V3".
+Connected pin "J1-3" to net "GND".
+Connected pin "J1-4" to net "PGD".
+Connected pin "J1-5" to net "PGC".
+
+
+End Of Report.
