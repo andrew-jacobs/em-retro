@@ -30,7 +30,8 @@
         .equiv  ESC,            0x1b
 
         .equiv  SD_CMD0,        (0x40|0x00)
-        .equiv  SD_CMD8,        (0x40|0x08)
+        .equiv  SD_CMD1,        (0x40|0x01)
+        .equiv  SD_CMD16,       (0x40|0x10)
 
 ;===============================================================================
 ; Device Configuration
@@ -314,8 +315,6 @@ __reset:
         rcall   ClearScreen
         rcall   GotoHome
 
-;        goto EM_65C02
-
         rcall   AttrBold                ; Show the banner
         rcall   PutStr
         .asciz  "  _____ __  __       ____      _\r\n"
@@ -326,7 +325,7 @@ __reset:
         rcall   PutStr
         .asciz  " | |___| |  | |_____|  _ <  __/ |_| | | (_) |\r\n"
         rcall   PutStr
-        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [15.07]\r\n"
+        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [16.04]\r\n"
         rcall   PutStr
         .asciz  "\r\n Copyright (C),2014-2015 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
         rcall   AttrNorm
@@ -470,7 +469,7 @@ ShowItem:
         return
 	
 8:	rcall	PutStr
-	.asciz	"Partition Manager"
+	.asciz	"SD/MMC"
 	return
 
 ; Output an extended description for each item
@@ -520,7 +519,9 @@ ShowDesc:
         .asciz  "[44K RAM @ 1MHz]"
         return
 	
-8:	return
+8:	rcall   PutStr
+        .asciz  "Virtual Disk Manager"
+        return
 
 ;-------------------------------------------------------------------------------
 
@@ -553,12 +554,14 @@ BootDevice:
         goto    EM_8080
         goto    EM_Z80
 	
-	goto	PartitionManager
+	goto	DiskManager
 
 ;===============================================================================
 ; VT200 Control Sequences
 ;-------------------------------------------------------------------------------
 
+; Emit the control sequence to clear the entire screen.
+        
         .text
         .global ClearScreen
 ClearScreen:
@@ -567,16 +570,19 @@ ClearScreen:
         rcall   UartTx
         mov     #'J',w0
         bra     UartTx
+        
+; Emit the control sequence to move the cursor to home (1,1)
 
         .global GotoHome
 GotoHome:
         mov     #1,w0                   ; Goto row 1
         mov     #1,w1                   ; .. column 1
 
+; Emit the control sequence to move the cursor to a row,col
         .global GotoRowCol
 GotoRowCol:
-        push    w1
-        push    w0
+        push    w1                      ; Save colum
+        push    w0                      ; Save row
         rcall   EmitCSI                 ; Start a CSI sequence
         pop     w0                      ; Then the row number
         rcall   EmitDecimal
@@ -601,6 +607,8 @@ EmitDecimal:
         ior     w1,w2,w0                ; Convert the second digit
         bra     UartTx                  ; And always display
 
+; Emit the control sequence to make text appear in bold
+        
         .global AttrBold
 AttrBold:
         rcall   EmitCSI
@@ -609,7 +617,8 @@ AttrBold:
         mov     #'m',w0
         bra     UartTx
 
-
+; Emit the control sequence to make text appear normal
+        
         .global AttrNorm
 AttrNorm:
         rcall   EmitCSI
@@ -618,6 +627,8 @@ AttrNorm:
         mov     #'m',w0
         bra     UartTx
 
+; Emit the control sequence to make text appear inverse.
+
         .global AttrInverse
 AttrInverse:
         rcall   EmitCSI
@@ -625,6 +636,8 @@ AttrInverse:
         rcall   UartTx
         mov     #'m',w0
         bra     UartTx
+        
+; Emit the initial part of a control code sequence.
 
         .global EmitCSI
 EmitCSI:
@@ -635,6 +648,9 @@ EmitCSI:
 
 ;-------------------------------------------------------------------------------
 
+; Print a zero terminated string that immediately follows the call instruction
+; that enters this routine.
+        
         .global PutStr
 PutStr:
         push.s
@@ -656,6 +672,8 @@ PutStr:
         push.d  w2                      ; Pestore the return address
         pop.s
         return
+        
+; Output the value in W0 as four hex characters.
 
         .global PutHex4
 PutHex4:
@@ -664,6 +682,8 @@ PutHex4:
         rcall   PutHex2
         pop     w0
 
+; Output the value in W2 as two hex characters.
+
         .global PutHex2
 PutHex2:
         push    w0
@@ -671,9 +691,13 @@ PutHex2:
         rcall   PutHex
         pop     w0
 
+; Output the lo nybble of W0 as a hex characters.
+
 PutHex:
         rcall   ToHex
         bra     UartTx
+
+; Convert the lo nybble of W0 to a hex character.
 
 ToHex:
         and     w0,#0x0f,w0
@@ -708,7 +732,8 @@ __U1RXInterrupt:
         bset    INT_FLAGS,#INT_UART_RX
         retfie
 
-;
+; When the UART can transmit a character update the software flags and then
+; clear the condition and disable the interrupt.
 
         .global __U1TXInterrupt
 __U1TXInterrupt:
@@ -717,9 +742,8 @@ __U1TXInterrupt:
         bclr    IEC0,#U1TXIE
         retfie
 
-;
-; Extract the first character from the UART RX buffer and return it to the
-; caller in w0. If the buffer is empty then switch task.
+; Wait for the software flags to indicate that a character is available and
+; then read it into W0
 
         .global UartRx
 UartRx:
@@ -729,7 +753,8 @@ UartRx:
         mov     U1RXREG,w0
         return                          ; Done
 
-;
+; Wait until the software flags show that the UART can transmit another
+; character and then send the data in W0.
 
         .global UartTx
 UartTx:
@@ -788,7 +813,7 @@ SpiFast:
         nop
         bclr    SPI_LAT,#SCK_PIN        ; Set clock low
         btsc    SPI_PORT,#SDI_PIN       ; Did slave output a high?
-        bset    w0,#1                   ; Yes, copy into result
+        bset    w0,#0                   ; Yes, copy into result
         .endr
         nop
         nop
@@ -810,8 +835,8 @@ SpiFast:
         return
         .endif
 
-;
-;
+; Transmit the byte of data in w0 to the SPI slave and return the data that was
+; received at the same time. Suspend cycle counting during the data exchange.
 
         .global SpiSlow
 SpiSlow:
@@ -830,12 +855,12 @@ SpiSlow:
         bset    SPI_LAT,#SCK_PIN        ; Set clock high
         btsc    w4,#7
         xor     #0x09,w14
-        repeat  #SPI_SLOW_DELAY/2-3     ; Wait for slave to latch
+        repeat  #SPI_SLOW_DELAY/2-80    ; Wait for slave to latch
         nop
         bclr    SPI_LAT,#SCK_PIN        ; Set clock low
         btsc    SPI_PORT,#SDI_PIN       ; Did slave output a high
-        bset    w0,#1                   ; Yes, copy into result
-        repeat  #SPI_SLOW_DELAY/2-5
+        bset    w0,#0                   ; Yes, copy into result
+        repeat  #SPI_SLOW_DELAY/2-80
         nop
         .endr
         nop
@@ -860,9 +885,10 @@ SpiSlow:
         .endif
 
 ;===============================================================================
-; SD Card Interface
+; SD/MMC Card Interface
 ;-------------------------------------------------------------------------------
 
+; Send the SD/MMC initialisation sequence to the card via SPI.
 
 SdInit:
         push    w14
@@ -878,25 +904,64 @@ SdInit:
         rcall   SdIdleSlow
         rcall   SdIdleSlow
 
-        rcall   SpiSetLo                ; Send command zero
+        rcall   SpiSetLo                ; Send CMD0 (RESET)
         mov     #SD_CMD0,w0
-        clr     w1
-        clr     w2
+        mov     #0x0000,w1
+        mov     #0x0000,w2
         rcall   SdCmndSlow
+        mov     #0x01,w1                ; Wait for response
         rcall   SdWaitSlow
         rcall   SpiSetHi
-
-        repeat  #511
+        ; Handle timeout
+        
         nop
+        nop
+        nop
+        nop
+        
+        rcall   SdIdleSlow              ; Send dummy clock pulses
 
         rcall   SpiSetLo
-        mov     #SD_CMD8,w0
-        mov     #0,w1
-        mov     #1,w2
+        mov     #0x00ff,w3              ; Set attempt counter
+1:      mov     #SD_CMD1,w0             ; Send CMD1 (SEND_OP_COND)
+        mov     #0x0000,w1
+        mov     #0x0000,w2
+        rcall   SdCmndSlow   
+        mov     #0x00,w1                ; Wait for response
+        rcall   SdWaitSlow
+        
+        nop
+        nop
+        nop
+        nop
+        
+        bra     z,2f                    ; Command succeeded?   
+        dec     w3,w3                   ; No, try again
+        bra     nz,1b
+        ; Complete failure
+    
+2:      rcall   SpiSetHi
+        nop
+        nop
+        nop
+        nop
+        
+        rcall   SdIdleSlow              ; Send dummy clock pulses
+
+        rcall   SpiSetLo
+        mov     #SD_CMD16,w0            ; Send CMD16 (SET_BLOCKLEN)
+        mov     #0x0000,w1              ; 512 bytes
+        mov     #0x0200,w2
         rcall   SdCmndSlow
+        mov     #0x00,w1                ; Wait for response
         rcall   SdWaitSlow
         rcall   SpiSetHi
-
+        ; Handle timeout
+        
+        nop
+        nop
+        nop
+        nop
 
         pop     w14
         return
@@ -917,32 +982,43 @@ SdCmndSlow:
         rcall   SpiSlow                 ; Send LSB of argument
         bset    SR,#C                   ; Form CRC7 byte
         addc.b  w14,w14,w0
-
-        nop
-        nop
-        nop
-        nop
-
         bra     SpiSlow                 ; And send it
 
-
-
+; Send an dummy byte to the card and check if the result byte matches w1 or a
+; timeout is reached. Return with Z=1 if a match is found.
 
 SdWaitSlow:
-        rcall   SdIdleSlow
-        btsc    w0,#7
-        bra     SdWaitSlow
+        mov     #0xff,w2                ; Set timeout counter
+1:      rcall   SdIdleSlow              ; Send a dummy byte
+        cp.b    w0,w1                   ; Result matches?
+        bra     nz,2f
+        return                          ; Yes, Z=1
+2:      dec     w2,w2                   ; Reduce counter
+        bra     nz,1b
+        bclr    SR,#Z                   ; Force Z=0
         return
-
+        
+; Send an all HI dummy byte to the SD card and return the byte it send back.
+        
 SdIdleSlow:
         mov     #0xff,w0
         bra     SpiSlow
 	
 ;===============================================================================
-; Partition Manager
+; SD/MMC Manager
 ;-------------------------------------------------------------------------------
 	
-PartitionManager:
+DiskManager:
+        rcall   ClearScreen
+        
+        rcall   SdInit
+        
+        
+        
+        nop
+        nop
+        nop
+        nop
 	
 	reset
 

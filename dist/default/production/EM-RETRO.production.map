@@ -83,6 +83,9 @@ section                    address   length (PC units)   length (bytes) (dec)
 .text                        0x200                0xac           0x102  (258)
 .os_65c02                   0x1000              0x5000          0x7800  (30720)
 .65c02                      0x6000              0x4592          0x685b  (26715)
+.text                       0xa592               0x810           0xc18  (3096)
+.dinit                      0xada2                0x38            0x54  (84)
+.shared.dinit               0xadda                 0x2             0x3  (3)
 .basic_6502                 0xb000              0x4000          0x6000  (24576)
 .forth_6502                 0xf000              0x4000          0x6000  (24576)
 .lisp_6502                 0x13000              0x4000          0x6000  (24576)
@@ -96,15 +99,12 @@ section                    address   length (PC units)   length (bytes) (dec)
 .8080                      0x29a48              0x1774          0x232e  (9006)
 .1802                      0x2b1bc              0x1490          0x1ed8  (7896)
 .6809                      0x2c64c              0x11be          0x1a9d  (6813)
-.text                      0x2d80a               0x7b8           0xb94  (2964)
-.dinit                     0x2dfc2                0x38            0x54  (84)
-.shared.dinit              0x2dffa                 0x2             0x3  (3)
 .blank_page                0x2e000              0x1000          0x1800  (6144)
 .nibl_scmp                 0x2f000              0x1000          0x1800  (6144)
 .forth_scmp                0x30000              0x1000          0x1800  (6144)
 .scarab_scmp               0x31000              0x1000          0x1800  (6144)
 
-                 Total program memory used (bytes):        0x475ef  (292335) 55%
+                 Total program memory used (bytes):        0x47673  (292467) 55%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x1fc]
@@ -180,10 +180,33 @@ External Symbols in Data Memory (by name):
 
 External Symbols in Program Memory (by address):
 
-                  0x000200                  __data_init
                   0x000200                  __data_init_extended
+                  0x000200                  __data_init
                   0x0002a8                  __DefaultInterrupt
                   0x006000                  EM_65C02
+                  0x00a592                  __reset
+                  0x00aa2a                  ClearScreen
+                  0x00aa34                  GotoHome
+                  0x00aa38                  GotoRowCol
+                  0x00aa60                  AttrBold
+                  0x00aa6a                  AttrNorm
+                  0x00aa74                  AttrInverse
+                  0x00aa7e                  EmitCSI
+                  0x00aa86                  PutStr
+                  0x00aaa4                  PutHex4
+                  0x00aaac                  PutHex2
+                  0x00aadc                  __U1RXInterrupt
+                  0x00aae2                  __U1TXInterrupt
+                  0x00aaea                  UartRx
+                  0x00aaf4                  UartTx
+                  0x00ab00                  __U1ErrInterrupt
+                  0x00ab02                  SpiSetLo
+                  0x00ab06                  SpiSetHi
+                  0x00ab0a                  SpiFast
+                  0x00abe2                  SpiSlow
+                  0x00ad8e                  __T1Interrupt
+                  0x00ad94                  __T2Interrupt
+                  0x00ad9a                  __CNInterrupt
                   0x01b000                  EM_6502
                   0x01e24a                  EM_6800
                   0x026000                  EM_SCMP
@@ -191,39 +214,16 @@ External Symbols in Program Memory (by address):
                   0x029a48                  EM_8080
                   0x02b1bc                  EM_1802
                   0x02c64c                  EM_6809
-                  0x02d80a                  __reset
-                  0x02dc94                  ClearScreen
-                  0x02dc9e                  GotoHome
-                  0x02dca2                  GotoRowCol
-                  0x02dcca                  AttrBold
-                  0x02dcd4                  AttrNorm
-                  0x02dcde                  AttrInverse
-                  0x02dce8                  EmitCSI
-                  0x02dcf0                  PutStr
-                  0x02dd0e                  PutHex4
-                  0x02dd16                  PutHex2
-                  0x02dd46                  __U1RXInterrupt
-                  0x02dd4c                  __U1TXInterrupt
-                  0x02dd54                  UartRx
-                  0x02dd5e                  UartTx
-                  0x02dd6a                  __U1ErrInterrupt
-                  0x02dd6c                  SpiSetLo
-                  0x02dd70                  SpiSetHi
-                  0x02dd74                  SpiFast
-                  0x02de4c                  SpiSlow
-                  0x02dfae                  __T1Interrupt
-                  0x02dfb4                  __T2Interrupt
-                  0x02dfba                  __CNInterrupt
                   0x02e000                  BLANK
                   0x0557fa                  __FGS.sec
 
 External Symbols in Program Memory (by name):
 
-                  0x02dcca                  AttrBold
-                  0x02dcde                  AttrInverse
-                  0x02dcd4                  AttrNorm
+                  0x00aa60                  AttrBold
+                  0x00aa74                  AttrInverse
+                  0x00aa6a                  AttrNorm
                   0x02e000                  BLANK
-                  0x02dc94                  ClearScreen
+                  0x00aa2a                  ClearScreen
                   0x02b1bc                  EM_1802
                   0x01b000                  EM_6502
                   0x006000                  EM_65C02
@@ -232,29 +232,29 @@ External Symbols in Program Memory (by name):
                   0x029a48                  EM_8080
                   0x026000                  EM_SCMP
                   0x027d40                  EM_Z80
-                  0x02dce8                  EmitCSI
-                  0x02dc9e                  GotoHome
-                  0x02dca2                  GotoRowCol
-                  0x02dd16                  PutHex2
-                  0x02dd0e                  PutHex4
-                  0x02dcf0                  PutStr
-                  0x02dd74                  SpiFast
-                  0x02dd70                  SpiSetHi
-                  0x02dd6c                  SpiSetLo
-                  0x02de4c                  SpiSlow
-                  0x02dd54                  UartRx
-                  0x02dd5e                  UartTx
-                  0x02dfba                  __CNInterrupt
+                  0x00aa7e                  EmitCSI
+                  0x00aa34                  GotoHome
+                  0x00aa38                  GotoRowCol
+                  0x00aaac                  PutHex2
+                  0x00aaa4                  PutHex4
+                  0x00aa86                  PutStr
+                  0x00ab0a                  SpiFast
+                  0x00ab06                  SpiSetHi
+                  0x00ab02                  SpiSetLo
+                  0x00abe2                  SpiSlow
+                  0x00aaea                  UartRx
+                  0x00aaf4                  UartTx
+                  0x00ad9a                  __CNInterrupt
                   0x0002a8                  __DefaultInterrupt
                   0x0557fa                  __FGS.sec
-                  0x02dfae                  __T1Interrupt
-                  0x02dfb4                  __T2Interrupt
-                  0x02dd6a                  __U1ErrInterrupt
-                  0x02dd46                  __U1RXInterrupt
-                  0x02dd4c                  __U1TXInterrupt
+                  0x00ad8e                  __T1Interrupt
+                  0x00ad94                  __T2Interrupt
+                  0x00ab00                  __U1ErrInterrupt
+                  0x00aadc                  __U1RXInterrupt
+                  0x00aae2                  __U1TXInterrupt
                   0x000200                  __data_init
                   0x000200                  __data_init_extended
-                  0x02d80a                  __reset
+                  0x00a592                  __reset
 
 Memory Configuration
 
@@ -308,9 +308,9 @@ LOAD c:/program files (x86)/microchip/xc16/v1.26/bin/bin/../../lib\libfx-elf.a
                     0xc000                  __DATA_LENGTH = 0xc000
 
 .reset            0x000000          0x4
-                  0x000000          0x2 SHORT 0x2d80a ABSOLUTE (__reset)
+                  0x000000          0x2 SHORT 0xa592 ABSOLUTE (__reset)
                   0x000001          0x2 SHORT 0x4
-                  0x000002          0x2 SHORT 0x2 ((ABSOLUTE (__reset) >> 0x10) & 0x7f)
+                  0x000002          0x2 SHORT 0x0 ((ABSOLUTE (__reset) >> 0x10) & 0x7f)
                   0x000003          0x2 SHORT 0x0
 
 .text             0x000200         0xac
@@ -396,7 +396,7 @@ __FUID3
  .debug_abbrev    0x00008c         0x14 build/default/production/em-z80.o
  .debug_abbrev    0x0000a0         0x14 build/default/production/firmware.o
 
-.debug_line       0x000000       0x2ac8
+.debug_line       0x000000       0x2af0
  *(.debug_line)
  .debug_line      0x000000        0x326 build/default/production/em-1802.o
  .debug_line      0x000326        0x533 build/default/production/em-6502.o
@@ -407,7 +407,7 @@ __FUID3
  .debug_line      0x001c27         0x1a build/default/production/em-retro.o
  .debug_line      0x001c41        0x37f build/default/production/em-scmp.o
  .debug_line      0x001fc0        0x8d4 build/default/production/em-z80.o
- .debug_line      0x002894        0x234 build/default/production/firmware.o
+ .debug_line      0x002894        0x25c build/default/production/firmware.o
 
 .debug_frame
  *(.debug_frame)
@@ -1441,34 +1441,34 @@ __c30_signature
 .scarab_scmp      0x031000       0x1000
  .scarab_scmp     0x031000       0x1000 build/default/production/em-scmp.o
 
-.text             0x02d80a        0x7b8
- .text            0x02d80a        0x7b8 build/default/production/firmware.o
-                  0x02d80a                  __reset
-                  0x02dc94                  ClearScreen
-                  0x02dc9e                  GotoHome
-                  0x02dca2                  GotoRowCol
-                  0x02dcca                  AttrBold
-                  0x02dcd4                  AttrNorm
-                  0x02dcde                  AttrInverse
-                  0x02dce8                  EmitCSI
-                  0x02dcf0                  PutStr
-                  0x02dd0e                  PutHex4
-                  0x02dd16                  PutHex2
-                  0x02dd46                  __U1RXInterrupt
-                  0x02dd4c                  __U1TXInterrupt
-                  0x02dd54                  UartRx
-                  0x02dd5e                  UartTx
-                  0x02dd6a                  __U1ErrInterrupt
-                  0x02dd6c                  SpiSetLo
-                  0x02dd70                  SpiSetHi
-                  0x02dd74                  SpiFast
-                  0x02de4c                  SpiSlow
-                  0x02dfae                  __T1Interrupt
-                  0x02dfb4                  __T2Interrupt
-                  0x02dfba                  __CNInterrupt
+.text             0x00a592        0x810
+ .text            0x00a592        0x810 build/default/production/firmware.o
+                  0x00a592                  __reset
+                  0x00aa2a                  ClearScreen
+                  0x00aa34                  GotoHome
+                  0x00aa38                  GotoRowCol
+                  0x00aa60                  AttrBold
+                  0x00aa6a                  AttrNorm
+                  0x00aa74                  AttrInverse
+                  0x00aa7e                  EmitCSI
+                  0x00aa86                  PutStr
+                  0x00aaa4                  PutHex4
+                  0x00aaac                  PutHex2
+                  0x00aadc                  __U1RXInterrupt
+                  0x00aae2                  __U1TXInterrupt
+                  0x00aaea                  UartRx
+                  0x00aaf4                  UartTx
+                  0x00ab00                  __U1ErrInterrupt
+                  0x00ab02                  SpiSetLo
+                  0x00ab06                  SpiSetHi
+                  0x00ab0a                  SpiFast
+                  0x00abe2                  SpiSlow
+                  0x00ad8e                  __T1Interrupt
+                  0x00ad94                  __T2Interrupt
+                  0x00ad9a                  __CNInterrupt
 
-.dinit            0x02dfc2         0x38
- .dinit           0x02dfc2         0x38 data_init
+.dinit            0x00ada2         0x38
+ .dinit           0x00ada2         0x38 data_init
 
-.shared.dinit     0x02dffa          0x2
- .shared.dinit    0x02dffa          0x2 shared_data_init
+.shared.dinit     0x00adda          0x2
+ .shared.dinit    0x00adda          0x2 shared_data_init
