@@ -83,9 +83,9 @@ section                    address   length (PC units)   length (bytes) (dec)
 .text                        0x200                0xac           0x102  (258)
 .os_65c02                   0x1000              0x5000          0x7800  (30720)
 .65c02                      0x6000              0x4592          0x685b  (26715)
-.text                       0xa592               0x810           0xc18  (3096)
-.dinit                      0xada2                0x38            0x54  (84)
-.shared.dinit               0xadda                 0x2             0x3  (3)
+.text                       0xa592               0x896           0xce1  (3297)
+.dinit                      0xae28                0x38            0x54  (84)
+.shared.dinit               0xae60                 0x2             0x3  (3)
 .basic_6502                 0xb000              0x4000          0x6000  (24576)
 .forth_6502                 0xf000              0x4000          0x6000  (24576)
 .lisp_6502                 0x13000              0x4000          0x6000  (24576)
@@ -93,7 +93,7 @@ section                    address   length (PC units)   length (bytes) (dec)
 .6502                      0x1b000              0x324a          0x4b6f  (19311)
 .6800                      0x1e24a              0x30c6          0x4929  (18729)
 .weevil_6800               0x22000              0x2000          0x3000  (12288)
-.lisp_scmp                 0x24000              0x2000          0x3000  (12288)
+.forth_scmp                0x24000              0x2000          0x3000  (12288)
 .scmp                      0x26000              0x1d40          0x2be0  (11232)
 .z80                       0x27d40              0x1d08          0x2b8c  (11148)
 .8080                      0x29a48              0x1774          0x232e  (9006)
@@ -101,10 +101,9 @@ section                    address   length (PC units)   length (bytes) (dec)
 .6809                      0x2c64c              0x11be          0x1a9d  (6813)
 .blank_page                0x2e000              0x1000          0x1800  (6144)
 .nibl_scmp                 0x2f000              0x1000          0x1800  (6144)
-.forth_scmp                0x30000              0x1000          0x1800  (6144)
-.scarab_scmp               0x31000              0x1000          0x1800  (6144)
+.scarab_scmp               0x30000              0x1000          0x1800  (6144)
 
-                 Total program memory used (bytes):        0x47673  (292467) 55%
+                 Total program memory used (bytes):        0x45f3c  (286524) 54%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x1fc]
@@ -203,10 +202,10 @@ External Symbols in Program Memory (by address):
                   0x00ab02                  SpiSetLo
                   0x00ab06                  SpiSetHi
                   0x00ab0a                  SpiFast
-                  0x00abe2                  SpiSlow
-                  0x00ad8e                  __T1Interrupt
-                  0x00ad94                  __T2Interrupt
-                  0x00ad9a                  __CNInterrupt
+                  0x00ac02                  SpiSlow
+                  0x00ae14                  __T1Interrupt
+                  0x00ae1a                  __T2Interrupt
+                  0x00ae20                  __CNInterrupt
                   0x01b000                  EM_6502
                   0x01e24a                  EM_6800
                   0x026000                  EM_SCMP
@@ -241,14 +240,14 @@ External Symbols in Program Memory (by name):
                   0x00ab0a                  SpiFast
                   0x00ab06                  SpiSetHi
                   0x00ab02                  SpiSetLo
-                  0x00abe2                  SpiSlow
+                  0x00ac02                  SpiSlow
                   0x00aaea                  UartRx
                   0x00aaf4                  UartTx
-                  0x00ad9a                  __CNInterrupt
+                  0x00ae20                  __CNInterrupt
                   0x0002a8                  __DefaultInterrupt
                   0x0557fa                  __FGS.sec
-                  0x00ad8e                  __T1Interrupt
-                  0x00ad94                  __T2Interrupt
+                  0x00ae14                  __T1Interrupt
+                  0x00ae1a                  __T2Interrupt
                   0x00ab00                  __U1ErrInterrupt
                   0x00aadc                  __U1RXInterrupt
                   0x00aae2                  __U1TXInterrupt
@@ -396,18 +395,18 @@ __FUID3
  .debug_abbrev    0x00008c         0x14 build/default/production/em-z80.o
  .debug_abbrev    0x0000a0         0x14 build/default/production/firmware.o
 
-.debug_line       0x000000       0x2af0
+.debug_line       0x000000       0x2b25
  *(.debug_line)
- .debug_line      0x000000        0x326 build/default/production/em-1802.o
- .debug_line      0x000326        0x533 build/default/production/em-6502.o
- .debug_line      0x000859        0x647 build/default/production/em-65c02.o
- .debug_line      0x000ea0        0x51d build/default/production/em-6800.o
- .debug_line      0x0013bd        0x481 build/default/production/em-6809.o
- .debug_line      0x00183e        0x3e9 build/default/production/em-8080.o
- .debug_line      0x001c27         0x1a build/default/production/em-retro.o
- .debug_line      0x001c41        0x37f build/default/production/em-scmp.o
- .debug_line      0x001fc0        0x8d4 build/default/production/em-z80.o
- .debug_line      0x002894        0x25c build/default/production/firmware.o
+ .debug_line      0x000000        0x328 build/default/production/em-1802.o
+ .debug_line      0x000328        0x533 build/default/production/em-6502.o
+ .debug_line      0x00085b        0x647 build/default/production/em-65c02.o
+ .debug_line      0x000ea2        0x51d build/default/production/em-6800.o
+ .debug_line      0x0013bf        0x481 build/default/production/em-6809.o
+ .debug_line      0x001840        0x3e9 build/default/production/em-8080.o
+ .debug_line      0x001c29         0x1a build/default/production/em-retro.o
+ .debug_line      0x001c43        0x37f build/default/production/em-scmp.o
+ .debug_line      0x001fc2        0x8d4 build/default/production/em-z80.o
+ .debug_line      0x002896        0x28f build/default/production/firmware.o
 
 .debug_frame
  *(.debug_frame)
@@ -1405,8 +1404,8 @@ __c30_signature
 .weevil_6800      0x022000       0x2000
  .weevil_6800     0x022000       0x2000 build/default/production/em-6800.o
 
-.lisp_scmp        0x024000       0x2000
- .lisp_scmp       0x024000       0x2000 build/default/production/em-scmp.o
+.forth_scmp       0x024000       0x2000
+ .forth_scmp      0x024000       0x2000 build/default/production/em-scmp.o
 
 .scmp             0x026000       0x1d40
  .scmp            0x026000       0x1d40 build/default/production/em-scmp.o
@@ -1435,14 +1434,11 @@ __c30_signature
 .nibl_scmp        0x02f000       0x1000
  .nibl_scmp       0x02f000       0x1000 build/default/production/em-scmp.o
 
-.forth_scmp       0x030000       0x1000
- .forth_scmp      0x030000       0x1000 build/default/production/em-scmp.o
+.scarab_scmp      0x030000       0x1000
+ .scarab_scmp     0x030000       0x1000 build/default/production/em-scmp.o
 
-.scarab_scmp      0x031000       0x1000
- .scarab_scmp     0x031000       0x1000 build/default/production/em-scmp.o
-
-.text             0x00a592        0x810
- .text            0x00a592        0x810 build/default/production/firmware.o
+.text             0x00a592        0x896
+ .text            0x00a592        0x896 build/default/production/firmware.o
                   0x00a592                  __reset
                   0x00aa2a                  ClearScreen
                   0x00aa34                  GotoHome
@@ -1462,13 +1458,13 @@ __c30_signature
                   0x00ab02                  SpiSetLo
                   0x00ab06                  SpiSetHi
                   0x00ab0a                  SpiFast
-                  0x00abe2                  SpiSlow
-                  0x00ad8e                  __T1Interrupt
-                  0x00ad94                  __T2Interrupt
-                  0x00ad9a                  __CNInterrupt
+                  0x00ac02                  SpiSlow
+                  0x00ae14                  __T1Interrupt
+                  0x00ae1a                  __T2Interrupt
+                  0x00ae20                  __CNInterrupt
 
-.dinit            0x00ada2         0x38
- .dinit           0x00ada2         0x38 data_init
+.dinit            0x00ae28         0x38
+ .dinit           0x00ae28         0x38 data_init
 
-.shared.dinit     0x00adda          0x2
- .shared.dinit    0x00adda          0x2 shared_data_init
+.shared.dinit     0x00ae60          0x2
+ .shared.dinit    0x00ae60          0x2 shared_data_init

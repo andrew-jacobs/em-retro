@@ -692,16 +692,16 @@
 
         .macro  OP_SWI
         mov     R_PC,w3                 ; Push PC
-        WR_ADDR R_SR,w3
+        WR_ADDR R_SP,w3
         dec     R_SP,R_SP
         swap    w3
-        WR_ADDR R_SR,w3
+        WR_ADDR R_SP,w3
         dec     R_SP,R_SP
         mov     R_X,w3                  ; Push X
-        WR_ADDR R_SR,w3
+        WR_ADDR R_SP,w3
         dec     R_SP,R_SP
         swap    w3
-        WR_ADDR R_SR,w3
+        WR_ADDR R_SP,w3
         dec     R_SP,R_SP
         WR_ADDR R_SP,R_A                ; Push A
         dec     R_SP,R_SP
@@ -726,11 +726,11 @@
         dec     R_SP,R_SP
         bset    R_P,#F_I                ; Set interrupt disable
         mov     #0xfffa,w2              ; Read SWI vector
-        RD_ADDR w2,ze,w3
-        inc     w2,w2
         RD_ADDR w2,ze,R_PC
-        swap    R_PC                    ; Form new PC
-        ior     R_PC,w3,R_PC
+        inc     w2,w2
+	swap	R_PC
+        RD_ADDR w2,ze,w3              
+        ior     R_PC,w3,R_PC		; Form new PC
         .endm
 
         .macro  OP_TAB

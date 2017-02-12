@@ -43,7 +43,7 @@
         .extern PutStr
 EM_6800:
         call    PutStr
-        .asciz  "EM-6800 [15.01]\r\n"
+        .asciz  "EM-6800 [16.07]\r\n"
 
         mov     #MEMORY_MAP,M_BASE      ; Initialise memory map
         mov     #0xc000,M_FLAG          ; .. and read-only flags

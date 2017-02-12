@@ -47,7 +47,7 @@ REGS:
         .extern PutStr
 EM_1802:
         call    PutStr
-        .asciz  "EM-1802 [14.12]\r\n"
+        .asciz  "EM-1802 [16.09]\r\n"
 
         mov     #REGS,w0
         mov     w0,R_REGS

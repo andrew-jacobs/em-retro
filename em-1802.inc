@@ -545,11 +545,11 @@
 	mov	w3,w0
 	mov.b	WREG,INT_FLAGS		; Set interrupt flags
 	.endif
-	.if	\NUM == 1
+	.if	\NUM == 2
 	mov	w3,w0
 	mov.b	WREG,INT_ENABLE		; set interrupt enables
 	.endif
-	.if	\NUM == 1
+	.if	\NUM == 3
 	bclr	INT_FLAGS,#INT_UART_TX	; Clear 
 	mov     w3,U1TXREG
         bset    IEC0,#U1TXIE            ; Ensure TX enabled

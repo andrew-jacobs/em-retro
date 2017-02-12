@@ -97,6 +97,9 @@
         .equiv  FIFO_SIZE,      128
 
 ; SPI
+	
+	.equiv	SPI_FAST_HZ,	4000000
+	.equiv	SPI_SLOW_HZ,	125000
 
         .equiv  SPI_TRIS,       TRISB
         .equiv  SPI_LAT,        LATB
@@ -109,8 +112,8 @@
         .equiv  SDI_PIN,        11
         .equiv  SDI_RP,         43
 
-        .equiv  SPI_FAST_DELAY, FCPU / (2 * 10000000)
-        .equiv  SPI_SLOW_DELAY, FCPU / (2 *   125000)
+        .equiv  SPI_FAST_DELAY, FCPU / (2 * SPI_FAST_HZ)
+        .equiv  SPI_SLOW_DELAY, FCPU / (2 * SPI_SLOW_HZ)
         .endif
 
         .if     REV_1502

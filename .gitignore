@@ -4,3 +4,5 @@
 /code/65c02/forth/*.obj
 /code/scmp/nibl/*.obj
 /disassembly
+/code/scmp/forth/*.obj
+/code/1802/forth/forth.obj

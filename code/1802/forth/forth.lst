@@ -1,0 +1,1584 @@
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ;===============================================================================
+                            ;     _    _   _ ____        _____          _   _       _  ___   ___ ____  
+                            ;    / \  | \ | / ___|      |  ___|__  _ __| |_| |__   / |( _ ) / _ \___ \ 
+                            ;   / _ \ |  \| \___ \ _____| |_ / _ \| '__| __| '_ \  | |/ _ \| | | |__) |
+                            ;  / ___ \| |\  |___) |_____|  _| (_) | |  | |_| | | | | | (_) | |_| / __/ 
+                            ; /_/   \_\_| \_|____/      |_|  \___/|_|   \__|_| |_| |_|\___/ \___/_____|
+                            ;                                                                          
+                            ; A Direct Threaded RCA CDP1802 ANS Forth
+                            ;-------------------------------------------------------------------------------
+                            ; Copyright (C)2014-2016 HandCoded Software Ltd.
+                            ; All rights reserved.
+                            ;
+                            ; This work is made available under the terms of the Creative Commons
+                            ; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
+                            ; following URL to see the details.
+                            ;
+                            ; http://creativecommons.org/licenses/by-nc-sa/4.0/
+                            ;===============================================================================
+                            ; Notes:
+                            ;
+                            ; Only the CDP 1802 long branch instructions contain a 16-bit address value and
+                            ; this is in big-endian order so this is the order used for data variables in
+                            ; memory and on the return stack. Values on the data stack are in little-endian
+                            ; order to make arithmetic faster
+                            ;
+                            ; There No Alignment
+                            ;
+                            ; The stacks are always kept in a safe state so that interrupt code could be
+                            ; implemented in Forth.
+                            
+                            ;-------------------------------------------------------------------------------
+                            
+        00000000          = PC_CODE         .EQU    0                       ; Pointer used for native code
+        00000002          = PC_COLON        .EQU    2
+        00000003          = PC_NEXT         .EQU    3
+        00000004          = PC_USER         .EQU    4
+        00000005          = PC_CONSTANT     .EQU    5
+        00000006          = PC_VARIABLE     .EQU    6
+                            
+                            ; 7 & 8 free -- 1 kept for interrupts
+                            
+        00000009          = DSP             .EQU    9                       ; Data stack pointer
+        0000000A          = RSP             .EQU    10                      ; Return stack pointer
+        0000000B          = IP              .EQU    11                      ; Forth instruction pointer
+                            
+        0000000C          = T1              .EQU    12                      ; Temporary registers
+        0000000D          = T2              .EQU    13
+        0000000E          = T3              .EQU    14
+        0000000F          = T4              .EQU    15
+                            
+                            ;===============================================================================
+                            ; Data Areas
+                            ;-------------------------------------------------------------------------------
+                            
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                                            .BSS
+                                            .ORG    $2000
+                            
+002000  0000000000000000> : RSTACK          .SPACE  128
+002080  0000000000000000> : DSTACK          .SPACE  128
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+        00000000          = LAST            .SET    0
+                            
+        00000000          = NORMAL          .EQU    $00
+        00000080          = IMMED           .EQU    $80
+                            
+                            WORD            .MACRO  NAME,TYPE
+                            THIS            .SET    @
+                                            .WORD   LAST
+                                            .BYTE   TYPE
+                                            .BYTE   STRLEN(NAME)
+                                            .BYTE   NAME
+                            LAST            .SET    THIS
+                                            .ENDM
+                            
+                            STRING          .MACRO  MESG
+                                            .BYTE   STRLEN(MESG)
+                                            .BYTE   MESG
+                            ;               .SPACE  @ & 1
+                                            .ENDM
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                                            .CODE
+                                            .ORG    $0000
+                            
+000000  F820              :                 LDI     HI RSTACK               ; Reset the return stack
+000002  BA                :                 PHI     RSP
+000003  F800              :                 LDI     LO RSTACK
+000005  AA                :                 PLO     RSP
+                            
+000006  F820              :                 LDI     HI DSTACK               ; Reset the data stack
+000008  B9                :                 PHI     DSP
+000009  F880              :                 LDI     LO DSTACK
+00000B  A9                :                 PLO     DSP
+                            
+00000C  F800              :                 LDI     HI DO_NEXT              ; Reset interpreter address
+00000E  B3                :                 PHI     PC_NEXT
+00000F  F82F              :                 LDI     LO DO_NEXT
+000011  A3                :                 PLO     PC_NEXT
+                                            
+000012  F803              :                 LDI     HI DO_USER
+000014  B4                :                 PHI     PC_USER
+000015  F88F              :                 LDI     LO DO_USER
+000017  A4                :                 PLO     PC_USER
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                                            
+000018  F803              :                 LDI     HI DO_COLON
+00001A  B2                :                 PHI     PC_COLON
+00001B  F83A              :                 LDI     LO DO_COLON
+00001D  A2                :                 PLO     PC_COLON
+                                            
+00001E  F803              :                 LDI     HI DO_CONSTANT
+000020  B5                :                 PHI     PC_CONSTANT
+000021  F858              :                 LDI     LO DO_CONSTANT
+000023  A5                :                 PLO     PC_CONSTANT
+                                            
+000024  F803              :                 LDI     HI DO_VARIABLE
+000026  B6                :                 PHI     PC_VARIABLE
+000027  F89B              :                 LDI     LO DO_VARIABLE
+000029  A6                :                 PLO     PC_VARIABLE
+                                            
+00002A  E9                :                 SEX     DSP
+00002B  C0003D            :                 LBR     COLD
+                            
+                            ; Inner Interpreter
+                            
+00002E  D0                :                 SEP     PC_CODE                 ;
+00002F  4B                : DO_NEXT:        LDA     IP                      ; Fetch the next word address
+000030  B0                :                 PHI     PC_CODE
+000031  4B                :                 LDA     IP
+000032  A0                :                 PLO     PC_CODE
+000033  302E              :                 BR      DO_NEXT-1
+                            
+                            ;===============================================================================
+                            ;-------------------------------------------------------------------------------
+                            
+                                            WORD    "COLD",NORMAL
+        00000035          = THIS            .SET    @
+000035  0000              +                 .WORD   LAST
+000037  00                +                 .BYTE   NORMAL
+000038  04                +                 .BYTE   STRLEN("COLD")
+000039  434F4C44          +                 .BYTE   "COLD"
+        00000035          = LAST            .SET    THIS
+00003D  D2                : COLD:           SEP     PC_COLON
+                            
+                            ;===============================================================================
+                            ; Condition and Unconditional Branches
+                            ;-------------------------------------------------------------------------------
+                            
+                            Q_BRANCH:
+00003E  D3                :                 SEP     PC_NEXT
+                            
+                            BRANCH:
+00003F  D3                :                 SEP     PC_NEXT
+                            
+                            
+                            ;===============================================================================
+                            ; System Variables
+                            ;-------------------------------------------------------------------------------
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                            
+                            
+                            ;===============================================================================
+                            ; User Variables
+                            ;-------------------------------------------------------------------------------
+                            
+                            
+                            ; >IN ( -- a-addr )
+                            ;
+                            ; a-addr is the address of a cell containing the offset in characters from the
+                            ; start of the input buffer to the start of the parse area.
+                            
+                                            WORD    ">IN",NORMAL
+        00000040          = THIS            .SET    @
+000040  0035              +                 .WORD   LAST
+000042  00                +                 .BYTE   NORMAL
+000043  03                +                 .BYTE   STRLEN(">IN")
+000044  3E494E            +                 .BYTE   ">IN"
+        00000040          = LAST            .SET    THIS
+000047  D4                : TO_IN:          SEP     PC_USER
+000048  0002              :                 .WORD   2
+                            
+                            ; BASE ( -- a-addr )
+                            ;
+                            ; a-addr is the address of a cell containing the current number-conversion radix
+                            ; {{2...36}}.
+                            
+                                            WORD    "BASE",NORMAL
+        0000004A          = THIS            .SET    @
+00004A  0040              +                 .WORD   LAST
+00004C  00                +                 .BYTE   NORMAL
+00004D  04                +                 .BYTE   STRLEN("BASE")
+00004E  42415345          +                 .BYTE   "BASE"
+        0000004A          = LAST            .SET    THIS
+000052  D4                : BASE:           SEP     PC_USER
+000053  0004              :                 .WORD   4
+                            
+                            ; DP ( -- a )
+                            
+                                            WORD    "DP",NORMAL
+        00000055          = THIS            .SET    @
+000055  004A              +                 .WORD   LAST
+000057  00                +                 .BYTE   NORMAL
+000058  02                +                 .BYTE   STRLEN("DP")
+000059  4450              +                 .BYTE   "DP"
+        00000055          = LAST            .SET    THIS
+00005B  D4                : DP:             SEP     PC_USER
+00005C  0008              :                 .WORD   8
+                            
+                            ; LATEST ( -- a )
+                            
+                                            WORD    "LASTEST",NORMAL
+        0000005E          = THIS            .SET    @
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+00005E  0055              +                 .WORD   LAST
+000060  00                +                 .BYTE   NORMAL
+000061  07                +                 .BYTE   STRLEN("LASTEST")
+000062  4C415354455354    +                 .BYTE   "LASTEST"
+        0000005E          = LAST            .SET    THIS
+000069  D4                : LATEST:         SEP     PC_USER
+00006A  000E              :                 .WORD   14
+                            
+                            ; STATE ( -- a-addr)
+                            ;
+                            ; a-addr is the address of a cell containing the compilation-state flag. STATE
+                            ; is true when in compilation state, false otherwise.
+                            
+                                            WORD    "STATE",NORMAL
+        0000006C          = THIS            .SET    @
+00006C  005E              +                 .WORD   LAST
+00006E  00                +                 .BYTE   NORMAL
+00006F  05                +                 .BYTE   STRLEN("STATE")
+000070  5354415445        +                 .BYTE   "STATE"
+        0000006C          = LAST            .SET    THIS
+000075  D4                : STATE:          SEP     PC_USER
+000076  0006              :                 .WORD   6
+                            
+                            ;===============================================================================
+                            ; Constants
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; 0 ( -- 0 )
+                            
+                                            WORD    "0",NORMAL
+        00000078          = THIS            .SET    @
+000078  006C              +                 .WORD   LAST
+00007A  00                +                 .BYTE   NORMAL
+00007B  01                +                 .BYTE   STRLEN("0")
+00007C  30                +                 .BYTE   "0"
+        00000078          = LAST            .SET    THIS
+                            ZERO:
+00007D  F800              :                 LDI     0                       ; Push zero onto data stack
+00007F  29                :                 DEC     DSP
+000080  73                :                 STXD
+000081  59                :                 STR     DSP
+000082  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; 1 ( -- 1 )
+                            
+                                            WORD    "1",NORMAL
+        00000083          = THIS            .SET    @
+000083  0078              +                 .WORD   LAST
+000085  00                +                 .BYTE   NORMAL
+000086  01                +                 .BYTE   STRLEN("1")
+000087  31                +                 .BYTE   "1"
+        00000083          = LAST            .SET    THIS
+                            ONE:
+000088  F801              :                 LDI     1                       ; Push one onto data stack
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+00008A  29                :                 DEC     DSP
+00008B  73                :                 STXD
+00008C  59                :                 STR     DSP
+00008D  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; BL ( -- char )
+                            ;
+                            ; char is the character value for a space.
+                            
+                                            WORD    "BL",NORMAL
+        0000008E          = THIS            .SET    @
+00008E  0083              +                 .WORD   LAST
+000090  00                +                 .BYTE   NORMAL
+000091  02                +                 .BYTE   STRLEN("BL")
+000092  424C              +                 .BYTE   "BL"
+        0000008E          = LAST            .SET    THIS
+000094  D5                : BL:             SEP     PC_CONSTANT
+000095  0020              :                 .WORD   ' '
+                            
+                            ; FALSE ( -- false )
+                            ;
+                            ; Return a false flag.
+                            
+                                            WORD    "FALSE",NORMAL
+        00000097          = THIS            .SET    @
+000097  008E              +                 .WORD   LAST
+000099  00                +                 .BYTE   NORMAL
+00009A  05                +                 .BYTE   STRLEN("FALSE")
+00009B  46414C5345        +                 .BYTE   "FALSE"
+        00000097          = LAST            .SET    THIS
+                            FALSE:
+0000A0  F800              :                 LDI     $00                     ; Push false onto data stack
+0000A2  29                :                 DEC     DSP
+0000A3  73                :                 STXD
+0000A4  59                :                 STR     DSP
+0000A5  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; TRUE ( -- true )
+                            ;
+                            ; Return a true flag, a single-cell value with all bits set.
+                            
+                                            WORD    "TRUE",NORMAL
+        000000A6          = THIS            .SET    @
+0000A6  0097              +                 .WORD   LAST
+0000A8  00                +                 .BYTE   NORMAL
+0000A9  04                +                 .BYTE   STRLEN("TRUE")
+0000AA  54525545          +                 .BYTE   "TRUE"
+        000000A6          = LAST            .SET    THIS
+                            TRUE:
+0000AE  F8FF              :                 LDI     $FF                     ; Push true onto data stack
+0000B0  29                :                 DEC     DSP
+0000B1  73                :                 STXD
+0000B2  59                :                 STR     DSP
+0000B3  D3                :                 SEP     PC_NEXT                 ; And continue
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                            ;===============================================================================
+                            ; Address Alignment
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; ALIGN ( -- )
+                            ;
+                            ; If the data-space pointer is not aligned, reserve enough space to align it.
+                            
+                                            WORD    "ALIGN",NORMAL
+        000000B4          = THIS            .SET    @
+0000B4  00A6              +                 .WORD   LAST
+0000B6  00                +                 .BYTE   NORMAL
+0000B7  05                +                 .BYTE   STRLEN("ALIGN")
+0000B8  414C49474E        +                 .BYTE   "ALIGN"
+        000000B4          = LAST            .SET    THIS
+                            ALIGN:
+0000BD  D3                :                 SEP     PC_NEXT
+                            
+                            ; ALIGNED ( addr -- a-addr )
+                            ;
+                            ; a-addr is the first aligned address greater than or equal to addr.
+                            
+                                            WORD    "ALIGNED",NORMAL
+        000000BE          = THIS            .SET    @
+0000BE  00B4              +                 .WORD   LAST
+0000C0  00                +                 .BYTE   NORMAL
+0000C1  07                +                 .BYTE   STRLEN("ALIGNED")
+0000C2  414C49474E4544    +                 .BYTE   "ALIGNED"
+        000000BE          = LAST            .SET    THIS
+                            ALIGNED:
+0000C9  D3                :                 SEP     PC_NEXT
+                            
+                            ; ALLOT ( n -- )
+                            ;
+                            ; If n is greater than zero, reserve n address units of data space. If n is less
+                            ; than zero, release |n| address units of data space. If n is zero, leave the
+                            ; data-space pointer unchanged.
+                            ;
+                            ; : ALLOT ( n -- ) DP +! ;
+                            
+                                            WORD    "ALLOT",NORMAL
+        000000CA          = THIS            .SET    @
+0000CA  00BE              +                 .WORD   LAST
+0000CC  00                +                 .BYTE   NORMAL
+0000CD  05                +                 .BYTE   STRLEN("ALLOT")
+0000CE  414C4C4F54        +                 .BYTE   "ALLOT"
+        000000CA          = LAST            .SET    THIS
+0000D3  D2                : ALLOT:          SEP     PC_COLON
+0000D4  005B              :                 .WORD   DP
+0000D6  0136              :                 .WORD   PLUS_STORE
+0000D8  032F              :                 .WORD   EXIT
+                            
+                            ; CELL+ ( a-addr1 -- a-addr2 )
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ;
+                            ; Add the size in address units of a cell to a-addr1, giving a-addr2.
+                            
+                                            WORD    "CELL+",NORMAL
+        000000DA          = THIS            .SET    @
+0000DA  00CA              +                 .WORD   LAST
+0000DC  00                +                 .BYTE   NORMAL
+0000DD  05                +                 .BYTE   STRLEN("CELL+")
+0000DE  43454C4C2B        +                 .BYTE   "CELL+"
+        000000DA          = LAST            .SET    THIS
+                            CELL_PLUS:
+0000E3  49                :                 LDA     DSP
+0000E4  AC                :                 PLO     T1
+0000E5  09                :                 LDN     DSP
+0000E6  BC                :                 PHI     T1
+0000E7  1C                :                 INC     T1
+0000E8  1C                :                 INC     T1
+0000E9  9C                :                 GHI     T1
+0000EA  73                :                 STXD
+0000EB  8C                :                 GLO     T1
+0000EC  59                :                 STR     DSP
+0000ED  D3                :                 SEP     PC_NEXT
+                            
+                            ; CELLS ( n1 -- n2 )
+                            ;
+                            ; n2 is the size in address units of n1 cells.
+                            
+                                            WORD    "CELLS",NORMAL
+        000000EE          = THIS            .SET    @
+0000EE  00DA              +                 .WORD   LAST
+0000F0  00                +                 .BYTE   NORMAL
+0000F1  05                +                 .BYTE   STRLEN("CELLS")
+0000F2  43454C4C53        +                 .BYTE   "CELLS"
+        000000EE          = LAST            .SET    THIS
+                            CELLS:
+0000F7  C0028E            :                 LBR     TWO_TIMES
+                            
+                            ; CHAR+ ( c-addr1 -- c-addr2 )
+                            ;
+                            ; Add the size in address units of a character to c-addr1, giving c-addr2.
+                            
+                                            WORD    "CHAR+",NORMAL
+        000000FA          = THIS            .SET    @
+0000FA  00EE              +                 .WORD   LAST
+0000FC  00                +                 .BYTE   NORMAL
+0000FD  05                +                 .BYTE   STRLEN("CHAR+")
+0000FE  434841522B        +                 .BYTE   "CHAR+"
+        000000FA          = LAST            .SET    THIS
+                            CHAR_PLUS:
+000103  C0026E            :                 LBR     ONE_PLUS
+                            
+                            ; CHARS ( n1 -- n2 )
+                            ;
+                            ; n2 is the size in address units of n1 characters.
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                                            WORD    "CHARS",NORMAL
+        00000106          = THIS            .SET    @
+000106  00FA              +                 .WORD   LAST
+000108  00                +                 .BYTE   NORMAL
+000109  05                +                 .BYTE   STRLEN("CHARS")
+00010A  4348415253        +                 .BYTE   "CHARS"
+        00000106          = LAST            .SET    THIS
+                            CHARS:
+00010F  D3                :                 SEP     PC_NEXT
+                            
+                            ; HERE ( c-addr -- char )
+                            ;
+                            ; Fetch the character stored at c-addr. When the cell size is greater than
+                            ; character size, the unused high-order bits are all zeroes.
+                            
+                                            WORD    "HERE",NORMAL
+        00000110          = THIS            .SET    @
+000110  0106              +                 .WORD   LAST
+000112  00                +                 .BYTE   NORMAL
+000113  04                +                 .BYTE   STRLEN("HERE")
+000114  48455245          +                 .BYTE   "HERE"
+        00000110          = LAST            .SET    THIS
+000118  D2                : HERE:           SEP     PC_COLON
+000119  005B              :                 .WORD   DP
+00011B  015B              :                 .WORD   FETCH
+00011D  032F              :                 .WORD   EXIT
+                            
+                            ;===============================================================================
+                            ; Memory Access
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; ! ( x a-addr -- )
+                            ;
+                            ; Store x at a-addr.
+                            
+                                            WORD    "!",NORMAL
+        0000011F          = THIS            .SET    @
+00011F  0110              +                 .WORD   LAST
+000121  00                +                 .BYTE   NORMAL
+000122  01                +                 .BYTE   STRLEN("!")
+000123  21                +                 .BYTE   "!"
+        0000011F          = LAST            .SET    THIS
+                            STORE:
+000124  49                :                 LDA     DSP                     ; Pull the address
+000125  AC                :                 PLO     T1
+000126  49                :                 LDA     DSP
+000127  BC                :                 PHI     T1
+000128  49                :                 LDA     DSP                     ; Save data lo byte
+000129  AD                :                 PLO     T2
+00012A  49                :                 LDA     DSP                     ; Fetch data hi byte
+00012B  5C                :                 STR     T1                      ; .. and save
+00012C  1C                :                 INC     T1                      ; Bump address
+00012D  8D                :                 GLO     T2                      ; .. and save lo byte
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+00012E  5C                :                 STR     T1
+00012F  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; +! ( n|u a-addr -- )
+                            ;
+                            ; Add n|u to the single-cell number at a-addr.
+                            
+                                            WORD    "+!",NORMAL
+        00000130          = THIS            .SET    @
+000130  011F              +                 .WORD   LAST
+000132  00                +                 .BYTE   NORMAL
+000133  02                +                 .BYTE   STRLEN("+!")
+000134  2B21              +                 .BYTE   "+!"
+        00000130          = LAST            .SET    THIS
+                            PLUS_STORE:
+000136  49                :                 LDA     DSP                     ; Pull the address
+000137  AC                :                 PLO     T1
+000138  49                :                 LDA     DSP
+000139  BC                :                 PHI     T1
+00013A  EC                :                 SEX     T1                      ; Use memory for math
+00013B  1C                :                 INC     T1                      ; Point at lo byte
+00013C  49                :                 LDA     DSP                     ; Add the lo bytes
+00013D  F4                :                 ADD
+00013E  73                :                 STXD                            ; And save
+00013F  49                :                 LDA     DSP                     ; Add the hi bytes
+000140  F4                :                 ADC
+000141  5C                :                 STR     T1                      ; And save
+000142  E9                :                 SEX     DSP                     ; Use data stack for math
+000143  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; , ( x -- )
+                            ;
+                            ; Reserve one cell of data space and store x in the cell. If the data-space
+                            ; pointer is aligned when , begins execution, it will remain aligned when ,
+                            ; finishes execution.
+                            
+                                            WORD    ",",NORMAL
+        00000144          = THIS            .SET    @
+000144  0130              +                 .WORD   LAST
+000146  00                +                 .BYTE   NORMAL
+000147  01                +                 .BYTE   STRLEN(",")
+000148  2C                +                 .BYTE   ","
+        00000144          = LAST            .SET    THIS
+000149  D2                : COMMA:          SEP     PC_COLON
+00014A  0118              :                 .WORD   HERE
+00014C  0124              :                 .WORD   STORE
+00014E  0088              :                 .WORD   ONE
+000150  00F7              :                 .WORD   CELLS
+000152  00D3              :                 .WORD   ALLOT
+000154  032F              :                 .WORD   EXIT
+                            
+                            ; 2!
+                            ; 2@
+                            
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; @ ( a-addr -- x )
+                            ;
+                            ; x is the value stored at a-addr.
+                            
+                                            WORD    "@",NORMAL
+        00000156          = THIS            .SET    @
+000156  0144              +                 .WORD   LAST
+000158  00                +                 .BYTE   NORMAL
+000159  01                +                 .BYTE   STRLEN("@")
+00015A  40                +                 .BYTE   "@"
+        00000156          = LAST            .SET    THIS
+                            FETCH:
+00015B  D3                :                 SEP     PC_NEXT
+                            
+                            ; C! ( char c-addr -- )
+                            ;
+                            ; Store char at c-addr. When character size is smaller than cell size, only the
+                            ; number of loworder bits corresponding to character size are transferred.
+                            
+                                            WORD    "C!",NORMAL
+        0000015C          = THIS            .SET    @
+00015C  0156              +                 .WORD   LAST
+00015E  00                +                 .BYTE   NORMAL
+00015F  02                +                 .BYTE   STRLEN("C!")
+000160  4321              +                 .BYTE   "C!"
+        0000015C          = LAST            .SET    THIS
+                            C_STORE:
+000162  D3                :                 SEP     PC_NEXT
+                            
+                            ; C, ( char -- )
+                            ;
+                            ; Reserve space for one character in the data space and store char in the space.
+                            ; If the data-space pointer is character aligned when C, begins execution, it
+                            ; will remain character aligned when C, finishes execution.
+                            
+                                            WORD    "C,",NORMAL
+        00000163          = THIS            .SET    @
+000163  015C              +                 .WORD   LAST
+000165  00                +                 .BYTE   NORMAL
+000166  02                +                 .BYTE   STRLEN("C,")
+000167  432C              +                 .BYTE   "C,"
+        00000163          = LAST            .SET    THIS
+000169  D2                : C_COMMA:        SEP     PC_COLON
+00016A  0118              :                 .WORD   HERE
+00016C  0162              :                 .WORD   C_STORE
+00016E  0088              :                 .WORD   ONE
+000170  010F              :                 .WORD   CHARS
+000172  00D3              :                 .WORD   ALLOT
+000174  032F              :                 .WORD   EXIT
+                            
+                            ; C@ ( c-addr -- char )
+                            ;
+                            ; Fetch the character stored at c-addr. When the cell size is greater than
+                            ; character size, the unused high-order bits are all zeroes.
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                                            WORD    "C@",NORMAL
+        00000176          = THIS            .SET    @
+000176  0163              +                 .WORD   LAST
+000178  00                +                 .BYTE   NORMAL
+000179  02                +                 .BYTE   STRLEN("C@")
+00017A  4340              +                 .BYTE   "C@"
+        00000176          = LAST            .SET    THIS
+                            C_FETCH:
+00017C  D3                :                 SEP     PC_NEXT
+                            
+                            ; CMOVE
+                            ; CMOVE>
+                            
+                            ; COMPILE, ( xt -- )
+                            ;
+                            ; Append the execution semantics of the definition represented by xt to the
+                            ; execution semantics of the current definition.
+                            
+                                            WORD    "COMPILE,",NORMAL
+        0000017D          = THIS            .SET    @
+00017D  0176              +                 .WORD   LAST
+00017F  00                +                 .BYTE   NORMAL
+000180  08                +                 .BYTE   STRLEN("COMPILE,")
+000181  434F4D50494C452C  +                 .BYTE   "COMPILE,"
+        0000017D          = LAST            .SET    THIS
+                            COMPILE_COMMA:
+000189  C00149            :                 LBR     COMMA
+                            
+                            ; FILL
+                            
+                            ; MOVE
+                            
+                            ;===============================================================================
+                            ; Stack Operations
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; ?DUP
+                            
+                                            WORD    "?DUP",NORMAL
+        0000018C          = THIS            .SET    @
+00018C  017D              +                 .WORD   LAST
+00018E  00                +                 .BYTE   NORMAL
+00018F  04                +                 .BYTE   STRLEN("?DUP")
+000190  3F445550          +                 .BYTE   "?DUP"
+        0000018C          = LAST            .SET    THIS
+                            QDUP:
+000194  D3                :                 SEP     PC_NEXT
+                            
+                            ; 2DROP ( x1 x2 -- )
+                            ;
+                            ; Drop cell pair x1 x2 from the stack.
+                            
+                                            WORD    "2DROP",NORMAL
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+        00000195          = THIS            .SET    @
+000195  018C              +                 .WORD   LAST
+000197  00                +                 .BYTE   NORMAL
+000198  05                +                 .BYTE   STRLEN("2DROP")
+000199  3244524F50        +                 .BYTE   "2DROP"
+        00000195          = LAST            .SET    THIS
+                            TWO_DROP:
+00019E  49                :                 LDA     DSP                     ; Drop two words
+00019F  49                :                 LDA     DSP
+0001A0  49                :                 LDA     DSP
+0001A1  49                :                 LDA     DSP
+0001A2  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; 2DUP ( x1 x2 -- x1 x2 x1 x2 )
+                            ;
+                            ; Duplicate cell pair x1 x2.
+                            
+                                            WORD    "2DUP",NORMAL
+        000001A3          = THIS            .SET    @
+0001A3  0195              +                 .WORD   LAST
+0001A5  00                +                 .BYTE   NORMAL
+0001A6  04                +                 .BYTE   STRLEN("2DUP")
+0001A7  32445550          +                 .BYTE   "2DUP"
+        000001A3          = LAST            .SET    THIS
+0001AB  D2                : TWO_DUP:        SEP     PC_COLON
+0001AC  01D5              :                 .WORD   OVER
+0001AE  01D5              :                 .WORD   OVER
+0001B0  032F              :                 .WORD   EXIT
+                            
+                            ; DROP ( x -- )
+                            ;
+                            ; Remove x from the stack.
+                            
+                                            WORD    "DROP",NORMAL
+        000001B2          = THIS            .SET    @
+0001B2  01A3              +                 .WORD   LAST
+0001B4  00                +                 .BYTE   NORMAL
+0001B5  04                +                 .BYTE   STRLEN("DROP")
+0001B6  44524F50          +                 .BYTE   "DROP"
+        000001B2          = LAST            .SET    THIS
+                            DROP:
+0001BA  19                :                 INC     DSP                     ; Drop one word
+0001BB  19                :                 INC     DSP
+0001BC  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; DUP ( x -- x x )
+                            ;
+                            ; Duplicate x.
+                            
+                                            WORD    "DUP",NORMAL
+        000001BD          = THIS            .SET    @
+0001BD  01B2              +                 .WORD   LAST
+0001BF  00                +                 .BYTE   NORMAL
+0001C0  03                +                 .BYTE   STRLEN("DUP")
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+0001C1  445550            +                 .BYTE   "DUP"
+        000001BD          = LAST            .SET    THIS
+                            DUP:
+0001C4  D3                :                 SEP     PC_NEXT
+                            
+                                            WORD    "NIP",NORMAL
+        000001C5          = THIS            .SET    @
+0001C5  01BD              +                 .WORD   LAST
+0001C7  00                +                 .BYTE   NORMAL
+0001C8  03                +                 .BYTE   STRLEN("NIP")
+0001C9  4E4950            +                 .BYTE   "NIP"
+        000001C5          = LAST            .SET    THIS
+                            NIP:
+0001CC  D3                :                 SEP     PC_NEXT
+                            
+                                            WORD    "OVER",NORMAL
+        000001CD          = THIS            .SET    @
+0001CD  01C5              +                 .WORD   LAST
+0001CF  00                +                 .BYTE   NORMAL
+0001D0  04                +                 .BYTE   STRLEN("OVER")
+0001D1  4F564552          +                 .BYTE   "OVER"
+        000001CD          = LAST            .SET    THIS
+                            OVER:
+0001D5  D3                :                 SEP     PC_NEXT
+                                            
+                                            WORD    "ROT",NORMAL
+        000001D6          = THIS            .SET    @
+0001D6  01CD              +                 .WORD   LAST
+0001D8  00                +                 .BYTE   NORMAL
+0001D9  03                +                 .BYTE   STRLEN("ROT")
+0001DA  524F54            +                 .BYTE   "ROT"
+        000001D6          = LAST            .SET    THIS
+                            ROT:
+0001DD  D3                :                 SEP     PC_NEXT
+                            
+                            ; SWAP ( x1 x2 -- x2 x1 )
+                            ;
+                            ; Exchange the top two stack items.
+                            
+                                            WORD    "SWAP",NORMAL
+        000001DE          = THIS            .SET    @
+0001DE  01D6              +                 .WORD   LAST
+0001E0  00                +                 .BYTE   NORMAL
+0001E1  04                +                 .BYTE   STRLEN("SWAP")
+0001E2  53574150          +                 .BYTE   "SWAP"
+        000001DE          = LAST            .SET    THIS
+                            SWAP:
+0001E6  D3                :                 SEP     PC_NEXT
+                            
+                                            WORD    "TUCK",NORMAL
+        000001E7          = THIS            .SET    @
+0001E7  01DE              +                 .WORD   LAST
+0001E9  00                +                 .BYTE   NORMAL
+0001EA  04                +                 .BYTE   STRLEN("TUCK")
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+0001EB  5455434B          +                 .BYTE   "TUCK"
+        000001E7          = LAST            .SET    THIS
+                            TUCK:
+0001EF  D3                :                 SEP     PC_NEXT
+                            
+                            ;===============================================================================
+                            ; Return Stack Operations
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; >R ( x -- ) ( R: -- x )
+                            ;
+                            ; Move x to the return stack.
+                            
+                                            WORD    ">R",NORMAL
+        000001F0          = THIS            .SET    @
+0001F0  01E7              +                 .WORD   LAST
+0001F2  00                +                 .BYTE   NORMAL
+0001F3  02                +                 .BYTE   STRLEN(">R")
+0001F4  3E52              +                 .BYTE   ">R"
+        000001F0          = LAST            .SET    THIS
+                            TO_R:
+0001F6  49                :                 LDA     DSP                     ; Move the lo byte
+0001F7  2A                :                 DEC     RSP
+0001F8  5A                :                 STR     RSP
+0001F9  49                :                 LDA     DSP                     ; Then the hi byte
+0001FA  2A                :                 DEC     RSP
+0001FB  5A                :                 STR     RSP
+0001FC  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; R> ( -- x ) ( R: x -- )
+                            ;
+                            ; Move x from the return stack to the data stack.
+                            
+                                            WORD    "R>",NORMAL
+        000001FD          = THIS            .SET    @
+0001FD  01F0              +                 .WORD   LAST
+0001FF  00                +                 .BYTE   NORMAL
+000200  02                +                 .BYTE   STRLEN("R>")
+000201  523E              +                 .BYTE   "R>"
+        000001FD          = LAST            .SET    THIS
+                            R_FROM:
+000203  4A                :                 LDA     RSP                     ; Move the hi byte
+000204  29                :                 DEC     DSP
+000205  73                :                 STXD
+000206  4A                :                 LDA     RSP                     ; Then the lo byte
+000207  59                :                 STR     DSP
+000208  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; R@
+                            
+                            ;===============================================================================
+                            ; Binary Operators
+                            ;-------------------------------------------------------------------------------
+                            
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; AND ( x1 x2 -- x3 )
+                            ;
+                            ; x3 is the bit-by-bit logical “and” of x1 with x2.
+                            
+                                            WORD    "AND",NORMAL
+        00000209          = THIS            .SET    @
+000209  01FD              +                 .WORD   LAST
+00020B  00                +                 .BYTE   NORMAL
+00020C  03                +                 .BYTE   STRLEN("AND")
+00020D  414E44            +                 .BYTE   "AND"
+        00000209          = LAST            .SET    THIS
+                            AND:
+000210  49                :                 LDA     DSP                     ; Pull X2
+000211  AD                :                 PLO     T2
+000212  49                :                 LDA     DSP
+000213  BD                :                 PHI     T2
+000214  8D                :                 GLO     T2                      ; AND the lo byte
+000215  F2                :                 AND
+000216  AD                :                 PLO     T2                      ; .. and save
+000217  19                :                 INC     DSP                     ; AND the hi byte
+000218  9D                :                 GHI     T2
+000219  F2                :                 AND
+00021A  73                :                 STXD                            ; Update the hi
+00021B  AD                :                 PLO     T2                      ; .. and lo bytes
+00021C  59                :                 STR     DSP
+00021D  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; INVERT ( x1 -- x2 )
+                            ;
+                            ; Invert all bits of x1, giving its logical inverse x2.
+                            
+                                            WORD    "INVERT",NORMAL
+        0000021E          = THIS            .SET    @
+00021E  0209              +                 .WORD   LAST
+000220  00                +                 .BYTE   NORMAL
+000221  06                +                 .BYTE   STRLEN("INVERT")
+000222  494E56455254      +                 .BYTE   "INVERT"
+        0000021E          = LAST            .SET    THIS
+                            INVERT:
+000228  49                :                 LDA     DSP                     ; Fetch the lo byte
+000229  FBFF              :                 XRI     $FF                     ; .. invert
+00022B  AC                :                 PLO     T1                      ; .. and save
+00022C  F0                :                 LDX                             ; Fetch the hi byte
+00022D  FBFF              :                 XRI     $FF                     ; .. invert
+00022F  73                :                 STXD                            ; .. and write back
+000230  8C                :                 GLO     T1                      ; Recover the lo byte
+000231  59                :                 STR     DSP                     ; .. and write back
+000232  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; LSHIFT
+                            
+                            ; OR ( x1 x2 -- x3 )
+                            ;
+                            ; x3 is the bit-by-bit inclusive-or of x1 with x2.
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                                            WORD    "OR",NORMAL
+        00000233          = THIS            .SET    @
+000233  021E              +                 .WORD   LAST
+000235  00                +                 .BYTE   NORMAL
+000236  02                +                 .BYTE   STRLEN("OR")
+000237  4F52              +                 .BYTE   "OR"
+        00000233          = LAST            .SET    THIS
+                            OR:
+000239  49                :                 LDA     DSP                     ; Pull X2
+00023A  AD                :                 PLO     T2
+00023B  49                :                 LDA     DSP
+00023C  BD                :                 PHI     T2
+00023D  8D                :                 GLO     T2                      ; OR the lo byte
+00023E  F1                :                 OR
+00023F  AD                :                 PLO     T2                      ; .. and save
+000240  19                :                 INC     DSP                     ; OR the hi byte
+000241  9D                :                 GHI     T2
+000242  F1                :                 OR
+000243  73                :                 STXD                            ; Update the hi
+000244  AD                :                 PLO     T2                      ; .. and lo bytes
+000245  59                :                 STR     DSP
+000246  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ; RSHIFT
+                            
+                            ; XOR ( x1 x2 -- x3 )
+                            ;
+                            ; x3 is the bit-by-bit exclusive-or of x1 with x2.
+                            
+                                            WORD    "XOR",NORMAL
+        00000247          = THIS            .SET    @
+000247  0233              +                 .WORD   LAST
+000249  00                +                 .BYTE   NORMAL
+00024A  03                +                 .BYTE   STRLEN("XOR")
+00024B  584F52            +                 .BYTE   "XOR"
+        00000247          = LAST            .SET    THIS
+                            XOR:
+00024E  49                :                 LDA     DSP                     ; Pull X2
+00024F  AD                :                 PLO     T2
+000250  49                :                 LDA     DSP
+000251  BD                :                 PHI     T2
+000252  8D                :                 GLO     T2                      ; XOR the lo byte
+000253  F3                :                 XOR
+000254  AD                :                 PLO     T2                      ; .. and save
+000255  19                :                 INC     DSP                     ; XOR the hi byte
+000256  9D                :                 GHI     T2
+000257  F3                :                 XOR
+000258  73                :                 STXD                            ; Update the hi
+000259  AD                :                 PLO     T2                      ; .. and lo bytes
+00025A  59                :                 STR     DSP
+00025B  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                            ;===============================================================================
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; Single Arithmetic
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; + ( n1|u1 n2|u2 -- n3|u3 )
+                            ;
+                            ; Add n2|u2 to n1|u1, giving the sum n3|u3.
+                            
+                                            WORD    "+",NORMAL
+        0000025C          = THIS            .SET    @
+00025C  0247              +                 .WORD   LAST
+00025E  00                +                 .BYTE   NORMAL
+00025F  01                +                 .BYTE   STRLEN("+")
+000260  2B                +                 .BYTE   "+"
+        0000025C          = LAST            .SET    THIS
+                            PLUS:
+000261  D3                :                 SEP     PC_NEXT
+                            
+                            ; - ( n1|u1 n2|u2 -- n3|u3 )
+                            ;
+                            ; Subtract n2|u2 from n1|u1, giving the difference n3|u3.
+                            
+                                            WORD    "-",NORMAL
+        00000262          = THIS            .SET    @
+000262  025C              +                 .WORD   LAST
+000264  00                +                 .BYTE   NORMAL
+000265  01                +                 .BYTE   STRLEN("-")
+000266  2D                +                 .BYTE   "-"
+        00000262          = LAST            .SET    THIS
+                            MINUS:
+000267  D3                :                 SEP     PC_NEXT
+                            
+                            ; 1+ ( n1|u1 -- n2|u2 )
+                            ;
+                            ; Add one (1) to n1|u1 giving the sum n2|u2.
+                            
+                                            WORD    "1+",NORMAL
+        00000268          = THIS            .SET    @
+000268  0262              +                 .WORD   LAST
+00026A  00                +                 .BYTE   NORMAL
+00026B  02                +                 .BYTE   STRLEN("1+")
+00026C  312B              +                 .BYTE   "1+"
+        00000268          = LAST            .SET    THIS
+                            ONE_PLUS:
+00026E  49                :                 LDA     DSP
+00026F  AC                :                 PLO     T1
+000270  09                :                 LDN     DSP
+000271  BC                :                 PHI     T1
+000272  1C                :                 INC     T1
+000273  9C                :                 GHI     T1
+000274  73                :                 STXD
+000275  8C                :                 GLO     T1
+000276  59                :                 STR     DSP
+000277  D3                :                 SEP     PC_NEXT
+                                            
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; 1- ( n1|u1 -- n2|u2 )
+                            ;
+                            ; Subtract one (1) from n1|u1 giving the difference n2|u2.
+                            
+                                            WORD    "1-",NORMAL
+        00000278          = THIS            .SET    @
+000278  0268              +                 .WORD   LAST
+00027A  00                +                 .BYTE   NORMAL
+00027B  02                +                 .BYTE   STRLEN("1-")
+00027C  312D              +                 .BYTE   "1-"
+        00000278          = LAST            .SET    THIS
+                            ONE_MINUS:
+00027E  49                :                 LDA     DSP
+00027F  AC                :                 PLO     T1
+000280  09                :                 LDN     DSP
+000281  BC                :                 PHI     T1
+000282  2C                :                 DEC     T1
+000283  9C                :                 GHI     T1
+000284  73                :                 STXD
+000285  8C                :                 GLO     T1
+000286  59                :                 STR     DSP
+000287  D3                :                 SEP     PC_NEXT
+                            
+                            ; 2* ( x1 -- x2 )
+                            ;
+                            ; x2 is the result of shifting x1 one bit toward the most-significant bit,
+                            ; filling the vacated least-significant bit with zero.
+                            
+                                            WORD    "2*",NORMAL
+        00000288          = THIS            .SET    @
+000288  0278              +                 .WORD   LAST
+00028A  00                +                 .BYTE   NORMAL
+00028B  02                +                 .BYTE   STRLEN("2*")
+00028C  322A              +                 .BYTE   "2*"
+        00000288          = LAST            .SET    THIS
+                            TWO_TIMES:
+00028E  D3                :                 SEP     PC_NEXT
+                            
+                            ; 2/ ( x1 -- x2 )
+                            ;
+                            ; x2 is the result of shifting x1 one bit toward the least-significant bit,
+                            ; leaving the most-significant bit unchanged.
+                            
+                                            WORD    "2/",NORMAL
+        0000028F          = THIS            .SET    @
+00028F  0288              +                 .WORD   LAST
+000291  00                +                 .BYTE   NORMAL
+000292  02                +                 .BYTE   STRLEN("2/")
+000293  322F              +                 .BYTE   "2/"
+        0000028F          = LAST            .SET    THIS
+                            TWO_SLASH:
+000295  D3                :                 SEP     PC_NEXT
+                            
+                            ;===============================================================================
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; Mixed Arithmetic
+                            ;-------------------------------------------------------------------------------
+                            
+                            
+                            ; M+ ( d1|ud1 n -- d2|ud2 )
+                            ;
+                            ; Add n to d1|ud1, giving the sum d2|ud2.
+                            
+                                            WORD    "M+",NORMAL
+        00000296          = THIS            .SET    @
+000296  028F              +                 .WORD   LAST
+000298  00                +                 .BYTE   NORMAL
+000299  02                +                 .BYTE   STRLEN("M+")
+00029A  4D2B              +                 .BYTE   "M+"
+        00000296          = LAST            .SET    THIS
+                            M_PLUS:
+00029C  D3                :                 SEP     PC_NEXT
+                            
+                            ;===============================================================================
+                            ; Double Arithmetic
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; DNEGATE ( d1 -- d2 )
+                            ;
+                            ; d2 is the negation of d1.
+                            
+                                            WORD    "DNEGATE",NORMAL
+        0000029D          = THIS            .SET    @
+00029D  0296              +                 .WORD   LAST
+00029F  00                +                 .BYTE   NORMAL
+0002A0  07                +                 .BYTE   STRLEN("DNEGATE")
+0002A1  444E4547415445    +                 .BYTE   "DNEGATE"
+        0000029D          = LAST            .SET    THIS
+0002A8  D2                : D_NEGATE:       SEP     PC_COLON
+0002A9  01E6              :                 .WORD   SWAP
+0002AB  0228              :                 .WORD   INVERT
+0002AD  01E6              :                 .WORD   SWAP
+0002AF  0228              :                 .WORD   INVERT
+0002B1  0088              :                 .WORD   ONE
+0002B3  029C              :                 .WORD   M_PLUS
+0002B5  032F              :                 .word   EXIT
+                            
+                            ;===============================================================================
+                            ; Comparisons
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; 0< ( n -- flag )
+                            ;
+                            ; flag is true if and only if n is less than zero.
+                            
+                                            WORD    "0<",NORMAL
+        000002B7          = THIS            .SET    @
+0002B7  029D              +                 .WORD   LAST
+0002B9  00                +                 .BYTE   NORMAL
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+0002BA  02                +                 .BYTE   STRLEN("0<")
+0002BB  303C              +                 .BYTE   "0<"
+        000002B7          = LAST            .SET    THIS
+                            ZERO_LESS:
+0002BD  C000A0            :                 LBR     FALSE
+                            
+                            ; 0= ( x -- flag )
+                            ;
+                            ; flag is true if and only if x is equal to zero.
+                            
+                                            WORD    "0=",NORMAL
+        000002C0          = THIS            .SET    @
+0002C0  02B7              +                 .WORD   LAST
+0002C2  00                +                 .BYTE   NORMAL
+0002C3  02                +                 .BYTE   STRLEN("0=")
+0002C4  303D              +                 .BYTE   "0="
+        000002C0          = LAST            .SET    THIS
+                            ZERO_EQUAL:
+0002C6  C000A0            :                 LBR     FALSE
+                            
+                            
+                            ; U<
+                            
+                                            WORD    "U<",NORMAL
+        000002C9          = THIS            .SET    @
+0002C9  02C0              +                 .WORD   LAST
+0002CB  00                +                 .BYTE   NORMAL
+0002CC  02                +                 .BYTE   STRLEN("U<")
+0002CD  553C              +                 .BYTE   "U<"
+        000002C9          = LAST            .SET    THIS
+                            U_LESS:
+                            
+                            ; WITHIN ( n1|u1 n2|u2 n3|u3 -- flag )
+                            ;
+                            ; Perform a comparison of a test value n1|u1 with a lower limit n2|u2 and an
+                            ; upper limit n3|u3, returning true if either (n2|u2<n3|u3 and (n2|u2<=n1|u1 and
+                            ; n1|u1<n3|u3)) or (n2|u2>n3|u3 and (n2|u2<=n1|u1 or n1|u1<n3|u3)) is true,
+                            ; returning false otherwise. An ambiguous condition exists if n1|u1, n2|u2, and
+                            ; n3|u3 are not all the same type.
+                            
+                                            WORD    "WITHIN",NORMAL
+        000002CF          = THIS            .SET    @
+0002CF  02C9              +                 .WORD   LAST
+0002D1  00                +                 .BYTE   NORMAL
+0002D2  06                +                 .BYTE   STRLEN("WITHIN")
+0002D3  57495448494E      +                 .BYTE   "WITHIN"
+        000002CF          = LAST            .SET    THIS
+0002D9  D2                : WITHIN:         SEP     PC_COLON
+0002DA  01D5              :                 .WORD   OVER
+0002DC  0267              :                 .WORD   MINUS
+0002DE  01F6              :                 .WORD   TO_R
+0002E0  0267              :                 .WORD   MINUS
+0002E2  0203              :                 .WORD   R_FROM
+0002E4  02CF              :                 .WORD   U_LESS
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+0002E6  032F              :                 .WORD   EXIT
+                            
+                            ;===============================================================================
+                            ;
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; DECIMAL ( -- )
+                            ;
+                            ; Set the numeric conversion radix to ten (decimal).
+                            
+                                            WORD    "DECIMAL",NORMAL
+        000002E8          = THIS            .SET    @
+0002E8  02CF              +                 .WORD   LAST
+0002EA  00                +                 .BYTE   NORMAL
+0002EB  07                +                 .BYTE   STRLEN("DECIMAL")
+0002EC  444543494D414C    +                 .BYTE   "DECIMAL"
+        000002E8          = LAST            .SET    THIS
+0002F3  D2                : DECIMAL:        SEP     PC_COLON
+0002F4  0381000A          :                 .word   DO_LITERAL,10
+0002F8  0052              :                 .word   BASE
+0002FA  0124              :                 .word   STORE
+0002FC  032F              :                 .word   EXIT
+                            
+                            ; HEX ( -- )
+                            ;
+                            ; Set contents of BASE to sixteen.
+                            
+                                            WORD    "HEX",NORMAL
+        000002FE          = THIS            .SET    @
+0002FE  02E8              +                 .WORD   LAST
+000300  00                +                 .BYTE   NORMAL
+000301  03                +                 .BYTE   STRLEN("HEX")
+000302  484558            +                 .BYTE   "HEX"
+        000002FE          = LAST            .SET    THIS
+000305  D2                : HEX:            SEP     PC_COLON
+000306  03810010          :                 .word   DO_LITERAL,16
+00030A  0052              :                 .word   BASE
+00030C  0124              :                 .word   STORE
+00030E  032F              :                 .word   EXIT
+                            
+                            ;===============================================================================
+                            ; Number Formatting
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; #
+                            ; #>
+                            ; #S
+                            
+                            ;===============================================================================
+                            ; String Operations
+                            ;-------------------------------------------------------------------------------
+                            
+                            
+                            ;===============================================================================
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ; Control Operations
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; ABORT
+                            ; ABORT"
+                            
+                            ; EXECUTE ( i*x xt -- j*x )
+                            ;
+                            ; Remove xt from the stack and perform the semantics identified by it. Other
+                            ; stack effects aredue to the word EXECUTEd.
+                            
+                                            WORD    "EXECUTE",NORMAL
+        00000310          = THIS            .SET    @
+000310  02FE              +                 .WORD   LAST
+000312  00                +                 .BYTE   NORMAL
+000313  07                +                 .BYTE   STRLEN("EXECUTE")
+000314  45584543555445    +                 .BYTE   "EXECUTE"
+        00000310          = LAST            .SET    THIS
+                            EXECUTE:
+00031B  F803              :                 LDI     HI DO_EXECUTE
+00031D  BC                :                 PHI     T1
+00031E  F822              :                 LDI     LO DO_EXECUTE
+000320  AC                :                 PLO     T1
+000321  DC                :                 SEP     T1
+                            DO_EXECUTE:
+000322  49                :                 LDA     DSP
+000323  A0                :                 PLO     PC_CODE
+000324  49                :                 LDA     DSP
+000325  B0                :                 PHI     PC_CODE
+000326  D0                :                 SEP     PC_CODE
+                            
+                            ; EXIT ( -- ) ( R: nest-sys -- )
+                            ;
+                            ; Return control to the calling definition specified by nest-sys. Before
+                            ; executing EXIT within a do-loop, a program shall discard the loop-control
+                            ; parameters by executing UNLOOP.
+                            
+                                            WORD    "EXIT",NORMAL
+        00000327          = THIS            .SET    @
+000327  0310              +                 .WORD   LAST
+000329  00                +                 .BYTE   NORMAL
+00032A  04                +                 .BYTE   STRLEN("EXIT")
+00032B  45584954          +                 .BYTE   "EXIT"
+        00000327          = LAST            .SET    THIS
+                            EXIT:
+00032F  4A                :                 LDA     RSP
+000330  BB                :                 PHI     IP
+000331  4A                :                 LDA     RSP
+000332  AB                :                 PLO     IP
+000333  D3                :                 SEP     PC_NEXT
+                            
+                            ; QUIT
+                            
+                            
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            ;===============================================================================
+                            ; Compiling Words
+                            ;-------------------------------------------------------------------------------
+                            
+                            
+                                            WORD    ":",NORMAL
+        00000334          = THIS            .SET    @
+000334  0327              +                 .WORD   LAST
+000336  00                +                 .BYTE   NORMAL
+000337  01                +                 .BYTE   STRLEN(":")
+000338  3A                +                 .BYTE   ":"
+        00000334          = LAST            .SET    THIS
+                            COLON:
+                            
+                            
+000339  D3                :                 SEP     PC_NEXT
+00033A  8B                : DO_COLON:       GLO     IP                      ; Save callers IP
+00033B  2A                :                 DEC     RSP
+00033C  5A                :                 STR     RSP
+00033D  9B                :                 GHI     IP
+00033E  2A                :                 DEC     RSP
+00033F  5A                :                 STR     RSP
+000340  90                :                 GHI     PC_CODE                 ; Set IP from last code address
+000341  BB                :                 PHI     IP
+000342  80                :                 GLO     PC_CODE
+000343  AB                :                 PLO     IP
+000344  3039              :                 BR      DO_COLON-1              ; Reset COLON_PC and do NEXT
+                            
+                            
+                                            WORD    ";",IMMED
+        00000346          = THIS            .SET    @
+000346  0334              +                 .WORD   LAST
+000348  80                +                 .BYTE   IMMED
+000349  01                +                 .BYTE   STRLEN(";")
+00034A  3B                +                 .BYTE   ";"
+        00000346          = LAST            .SET    THIS
+                            
+                                            WORD    "CONSTANT",NORMAL
+        0000034B          = THIS            .SET    @
+00034B  0346              +                 .WORD   LAST
+00034D  00                +                 .BYTE   NORMAL
+00034E  08                +                 .BYTE   STRLEN("CONSTANT")
+00034F  434F4E5354414E54  +                 .BYTE   "CONSTANT"
+        0000034B          = LAST            .SET    THIS
+                            CONSTANT:
+                            
+000357  D3                :                 SEP     PC_NEXT
+                            DO_CONSTANT:
+000358  40                :                 LDA     PC_CODE                 ; Push constant hi byte
+000359  29                :                 DEC     DSP
+00035A  73                :                 STXD
+00035B  40                :                 LDA     PC_CODE                 ; Push constant lo byte
+00035C  59                :                 STR     DSP
+00035D  3057              :                 BR      DO_CONSTANT-1           ; And continue
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                            ; LITERAL ( x -- )
+                            ;
+                            ; Append the run-time semantics given below to the current definition.
+                            
+                                            WORD    "LITERAL",NORMAL
+        0000035F          = THIS            .SET    @
+00035F  034B              +                 .WORD   LAST
+000361  00                +                 .BYTE   NORMAL
+000362  07                +                 .BYTE   STRLEN("LITERAL")
+000363  4C49544552414C    +                 .BYTE   "LITERAL"
+        0000035F          = LAST            .SET    THIS
+                            LITERAL:
+00036A  03810381          :                 .WORD   DO_LITERAL,DO_LITERAL
+00036E  0189              :                 .WORD   COMPILE_COMMA
+000370  0149              :                 .WORD   COMMA
+000372  032F              :                 .WORD   EXIT
+                            
+                                            WORD    "(LITERAL)",NORMAL
+        00000374          = THIS            .SET    @
+000374  035F              +                 .WORD   LAST
+000376  00                +                 .BYTE   NORMAL
+000377  09                +                 .BYTE   STRLEN("(LITERAL)")
+000378  284C49544552414C> +                 .BYTE   "(LITERAL)"
+        00000374          = LAST            .SET    THIS
+                            DO_LITERAL:
+000381  4B                :                 LDA     IP                      ; Push literal hi byte
+000382  29                :                 DEC     DSP
+000383  73                :                 STXD
+000384  4B                :                 LDA     IP                      ; Push literal lo byte
+000385  59                :                 STR     DSP
+000386  D3                :                 SEP     PC_NEXT                 ; And continue
+                            
+                                            WORD    "USER",NORMAL
+        00000387          = THIS            .SET    @
+000387  0374              +                 .WORD   LAST
+000389  00                +                 .BYTE   NORMAL
+00038A  04                +                 .BYTE   STRLEN("USER")
+00038B  55534552          +                 .BYTE   "USER"
+        00000387          = LAST            .SET    THIS
+                            USER:
+                            
+                            DO_USER:
+                            
+                                            WORD    "VARIABLE",NORMAL
+        0000038F          = THIS            .SET    @
+00038F  0387              +                 .WORD   LAST
+000391  00                +                 .BYTE   NORMAL
+000392  08                +                 .BYTE   STRLEN("VARIABLE")
+000393  5641524941424C45  +                 .BYTE   "VARIABLE"
+        0000038F          = LAST            .SET    THIS
+                            VARIABLE:
+                            
+                            DO_VARIABLE:
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+                            
+                            ;===============================================================================
+                            ; I/O
+                            ;-------------------------------------------------------------------------------
+                            
+                            ; EMIT
+                            
+                                            WORD    "EMIT",NORMAL
+        0000039B          = THIS            .SET    @
+00039B  038F              +                 .WORD   LAST
+00039D  00                +                 .BYTE   NORMAL
+00039E  04                +                 .BYTE   STRLEN("EMIT")
+00039F  454D4954          +                 .BYTE   "EMIT"
+        0000039B          = LAST            .SET    THIS
+                            EMIT:
+0003A3  D3                :                 SEP     PC_NEXT
+                            
+                            ; SPACE
+                            
+                                            WORD    "SPACE",NORMAL
+        000003A4          = THIS            .SET    @
+0003A4  039B              +                 .WORD   LAST
+0003A6  00                +                 .BYTE   NORMAL
+0003A7  05                +                 .BYTE   STRLEN("SPACE")
+0003A8  5350414345        +                 .BYTE   "SPACE"
+        000003A4          = LAST            .SET    THIS
+0003AD  D2                : SPACE:          SEP     PC_COLON
+0003AE  0094              :                 .WORD   BL
+0003B0  03A3              :                 .WORD   EMIT
+0003B2  032F              :                 .WORD   EXIT
+                            
+                            ; SPACES
+                            
+                                            WORD    "SPACES",NORMAL
+        000003B4          = THIS            .SET    @
+0003B4  03A4              +                 .WORD   LAST
+0003B6  00                +                 .BYTE   NORMAL
+0003B7  06                +                 .BYTE   STRLEN("SPACES")
+0003B8  535041434553      +                 .BYTE   "SPACES"
+        000003B4          = LAST            .SET    THIS
+0003BE  D2                : SPACES:         SEP     PC_COLON
+0003BF  01C4              : .LOOP           .WORD   DUP
+0003C1  003E03CD          :                 .WORD   Q_BRANCH,.DONE
+0003C5  03AD              :                 .WORD   SPACE
+0003C7  027E              :                 .WORD   ONE_MINUS
+0003C9  003F03BF          :                 .WORD   BRANCH,.LOOP
+0003CD  01BA              : .DONE           .WORD   DROP
+0003CF  032F              :                 .WORD   EXIT
+                            
+                                            .END
+
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+Symbol Table
+
+ALIGN                            000000BD  | NORMAL                           00000000 
+ALIGNED                          000000C9  | PC_CODE                          00000000 
+ALLOT                            000000D3  | PC_COLON                         00000002 
+AND                              00000210  | PC_NEXT                          00000003 
+BASE                             00000052  | PC_USER                          00000004 
+BL                               00000094  | PC_CONSTANT                      00000005 
+BRANCH                           0000003F  | PC_VARIABLE                      00000006 
+CELLS                            000000F7  | DSP                              00000009 
+CELL_PLUS                        000000E3  | RSP                              0000000A 
+CHARS                            0000010F  | IP                               0000000B 
+CHAR_PLUS                        00000103  | T1                               0000000C 
+COLD                             0000003D  | T2                               0000000D 
+COLON                            00000339  | T3                               0000000E 
+COMMA                            00000149  | T4                               0000000F 
+COMPILE_COMMA                    00000189  | DO_NEXT                          0000002F 
+CONSTANT                         00000357  | COLD                             0000003D 
+C_COMMA                          00000169  | Q_BRANCH                         0000003E 
+C_FETCH                          0000017C  | BRANCH                           0000003F 
+C_STORE                          00000162  | TO_IN                            00000047 
+DECIMAL                          000002F3  | BASE                             00000052 
+DO_COLON                         0000033A  | DP                               0000005B 
+DO_CONSTANT                      00000358  | LATEST                           00000069 
+DO_EXECUTE                       00000322  | STATE                            00000075 
+DO_LITERAL                       00000381  | ZERO                             0000007D 
+DO_NEXT                          0000002F  | IMMED                            00000080 
+DO_USER                          0000038F  | ONE                              00000088 
+DO_VARIABLE                      0000039B  | BL                               00000094 
+DP                               0000005B  | FALSE                            000000A0 
+DROP                             000001BA  | TRUE                             000000AE 
+DSP                              00000009  | ALIGN                            000000BD 
+DSTACK                           00002080  | ALIGNED                          000000C9 
+DUP                              000001C4  | ALLOT                            000000D3 
+D_NEGATE                         000002A8  | CELL_PLUS                        000000E3 
+EMIT                             000003A3  | CELLS                            000000F7 
+EXECUTE                          0000031B  | CHAR_PLUS                        00000103 
+EXIT                             0000032F  | CHARS                            0000010F 
+FALSE                            000000A0  | HERE                             00000118 
+FETCH                            0000015B  | STORE                            00000124 
+HERE                             00000118  | PLUS_STORE                       00000136 
+HEX                              00000305  | COMMA                            00000149 
+IMMED                            00000080  | FETCH                            0000015B 
+INVERT                           00000228  | C_STORE                          00000162 
+IP                               0000000B  | C_COMMA                          00000169 
+LAST                             000003B4  | C_FETCH                          0000017C 
+LATEST                           00000069  | COMPILE_COMMA                    00000189 
+LITERAL                          0000036A  | QDUP                             00000194 
+MINUS                            00000267  | TWO_DROP                         0000019E 
+M_PLUS                           0000029C  | TWO_DUP                          000001AB 
+NIP                              000001CC  | DROP                             000001BA 
+NORMAL                           00000000  | DUP                              000001C4 
+ONE                              00000088  | NIP                              000001CC 
+ONE_MINUS                        0000027E  | OVER                             000001D5 
+
+Portable RCA CDP 1802 Assembler [16.09]
+
+ONE_PLUS                         0000026E  | ROT                              000001DD 
+OR                               00000239  | SWAP                             000001E6 
+OVER                             000001D5  | TUCK                             000001EF 
+PC_CODE                          00000000  | TO_R                             000001F6 
+PC_COLON                         00000002  | R_FROM                           00000203 
+PC_CONSTANT                      00000005  | AND                              00000210 
+PC_NEXT                          00000003  | INVERT                           00000228 
+PC_USER                          00000004  | OR                               00000239 
+PC_VARIABLE                      00000006  | XOR                              0000024E 
+PLUS                             00000261  | PLUS                             00000261 
+PLUS_STORE                       00000136  | MINUS                            00000267 
+QDUP                             00000194  | ONE_PLUS                         0000026E 
+Q_BRANCH                         0000003E  | ONE_MINUS                        0000027E 
+ROT                              000001DD  | TWO_TIMES                        0000028E 
+RSP                              0000000A  | TWO_SLASH                        00000295 
+RSTACK                           00002000  | M_PLUS                           0000029C 
+R_FROM                           00000203  | D_NEGATE                         000002A8 
+SPACE                            000003AD  | ZERO_LESS                        000002BD 
+SPACES                           000003BE  | ZERO_EQUAL                       000002C6 
+SPACES.DONE                      000003CD  | U_LESS                           000002CF 
+SPACES.LOOP                      000003BF  | WITHIN                           000002D9 
+STATE                            00000075  | DECIMAL                          000002F3 
+STORE                            00000124  | HEX                              00000305 
+SWAP                             000001E6  | EXECUTE                          0000031B 
+T1                               0000000C  | DO_EXECUTE                       00000322 
+T2                               0000000D  | EXIT                             0000032F 
+T3                               0000000E  | COLON                            00000339 
+T4                               0000000F  | DO_COLON                         0000033A 
+THIS                             000003B4  | CONSTANT                         00000357 
+TO_IN                            00000047  | DO_CONSTANT                      00000358 
+TO_R                             000001F6  | LITERAL                          0000036A 
+TRUE                             000000AE  | DO_LITERAL                       00000381 
+TUCK                             000001EF  | DO_USER                          0000038F 
+TWO_DROP                         0000019E  | USER                             0000038F 
+TWO_DUP                          000001AB  | DO_VARIABLE                      0000039B 
+TWO_SLASH                        00000295  | VARIABLE                         0000039B 
+TWO_TIMES                        0000028E  | EMIT                             000003A3 
+USER                             0000038F  | SPACE                            000003AD 
+U_LESS                           000002CF  | LAST                             000003B4 
+VARIABLE                         0000039B  | THIS                             000003B4 
+WITHIN                           000002D9  | SPACES                           000003BE 
+XOR                              0000024E  | SPACES.LOOP                      000003BF 
+ZERO                             0000007D  | SPACES.DONE                      000003CD 
+ZERO_EQUAL                       000002C6  | RSTACK                           00002000 
+ZERO_LESS                        000002BD  | DSTACK                           00002080 

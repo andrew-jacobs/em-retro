@@ -109,18 +109,18 @@ EM_SCMP:
         mov     w1,[M_BASE+44]
         mov     w2,[M_BASE+46]
 
-        mov     #edspage(FORTH),w1      ; FORTH 0xc000-0xcfff R/O
+        mov     #edspage(FORTH),w1      ; FORTH 0xc000-0xdfff R/O
         mov     #edsoffset(FORTH),w2
         mov     w1,[M_BASE+48]
         mov     w2,[M_BASE+50]
         bset    M_FLAG,#12
-        mov     #edspage(LISP),w1       ; LISP 0xd000-0xefff R/O
-        mov     #edsoffset(LISP),w2
+        mov     #edspage(FORTH+4096),w1
+        mov     #edsoffset(FORTH+4096),w2
         mov     w1,[M_BASE+52]
         mov     w2,[M_BASE+54]
         bset    M_FLAG,#13
-        mov     #edspage(LISP+4096),w1
-        mov     #edsoffset(LISP+4096),w2
+        mov     #edspage(BLANK),w1		; BLANK 0xe000-0xefff R/O
+        mov     #edsoffset(BLANK),w2
         mov     w1,[M_BASE+56]
         mov     w2,[M_BASE+58]
         bset    M_FLAG,#14
@@ -1089,20 +1089,11 @@ NIBL:
 ;===============================================================================
 ; FORTH
 ;-------------------------------------------------------------------------------
-; A 4K ROM that is mapped to page C
+; An 8K ROM that is mapped to page C & D
 
         .section .forth_scmp,code,align(0x1000)
 FORTH:
         .incbin "code/scmp/forth/forth.bin"
-
-;===============================================================================
-; LISP
-;-------------------------------------------------------------------------------
-; An 8K ROM that is mapped to pages D & E
-
-        .section .lisp_scmp,code,align(0x1000)
-LISP:
-        .incbin "code/scmp/lisp/lisp.bin"
 
 ;===============================================================================
 ; SCARAB (Debugger)

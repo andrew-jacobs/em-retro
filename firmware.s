@@ -27,11 +27,20 @@
 
         .include "hardware.inc"
 
+;===============================================================================
+; Constants
+;-------------------------------------------------------------------------------
+        
+; ASCII Control characaters
+
         .equiv  ESC,            0x1b
+
+; SD Card Commands
 
         .equiv  SD_CMD0,        (0x40|0x00)
         .equiv  SD_CMD1,        (0x40|0x01)
         .equiv  SD_CMD16,       (0x40|0x10)
+        .equiv  SD_CMD17,       (0x40|0x11)     ; Read Single block
 
 ;===============================================================================
 ; Device Configuration
@@ -325,9 +334,9 @@ __reset:
         rcall   PutStr
         .asciz  " | |___| |  | |_____|  _ <  __/ |_| | | (_) |\r\n"
         rcall   PutStr
-        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [16.04]\r\n"
+        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [16.07]\r\n"
         rcall   PutStr
-        .asciz  "\r\n Copyright (C),2014-2015 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
+        .asciz  "\r\n Copyright (C),2014-2016 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
         rcall   AttrNorm
 
         btsc    SW_PORT,#SW_PIN         ; Is the user switch pressed?
@@ -809,11 +818,13 @@ SpiFast:
         bset    SPI_LAT,#SCK_PIN        ; Set clock high
         btsc    w4,#7
         xor     #0x09,w14
-        nop                             ; Wait for slave to latch
+        repeat  #SPI_FAST_DELAY/2       ; Wait for slave to latch
         nop
         bclr    SPI_LAT,#SCK_PIN        ; Set clock low
         btsc    SPI_PORT,#SDI_PIN       ; Did slave output a high?
         bset    w0,#0                   ; Yes, copy into result
+        repeat  #SPI_FAST_DELAY/2
+        nop
         .endr
         nop
         nop
@@ -855,12 +866,12 @@ SpiSlow:
         bset    SPI_LAT,#SCK_PIN        ; Set clock high
         btsc    w4,#7
         xor     #0x09,w14
-        repeat  #SPI_SLOW_DELAY/2-80    ; Wait for slave to latch
+        repeat  #SPI_SLOW_DELAY/2       ; Wait for slave to latch
         nop
         bclr    SPI_LAT,#SCK_PIN        ; Set clock low
         btsc    SPI_PORT,#SDI_PIN       ; Did slave output a high
         bset    w0,#0                   ; Yes, copy into result
-        repeat  #SPI_SLOW_DELAY/2-80
+        repeat  #SPI_SLOW_DELAY/2
         nop
         .endr
         nop
@@ -962,8 +973,46 @@ SdInit:
         nop
         nop
         nop
+        
+        rcall   SdIdleSlow
 
         pop     w14
+        return
+        
+        
+; Read a block from an SD card. The target memory address should be specified in
+; w1 and the LBA in w2:w3 (lo:hi)
+        
+SdRead:
+        push    w1                      ; Save memory address
+        rcall   SpiSetLo
+        mov     #SD_CMD17,w0            ; Send read command and LBA
+        mov     w3,w1
+        rcall   SdCmndFast
+        mov     #0x00,w1                ; Wait for response
+        rcall   SdWaitFast
+        mov     #0xfe,w1                ; Wait for response
+        rcall   SdWaitFast
+        
+        pop     w1                      ; Recover buffer address
+        mov     #512,w2                 ; Set block size
+        clr     CRCWDATL                ; Clear CRC generator
+        
+ 1:     rcall   SdIdleFast              ; Read abyte
+        mov.b   w0,[w1++]
+        dec     w2,w2
+        bra     nz,1b
+        
+        rcall   SdIdleFast              ; Discard CRC
+        rcall   SdIdleFast
+        
+        rcall   SpiSetHi
+        bra     SdIdleFast
+        
+SdWrite:
+        
+        
+        
         return
 
 ; Set a command to the SD card
@@ -984,6 +1033,22 @@ SdCmndSlow:
         addc.b  w14,w14,w0
         bra     SpiSlow                 ; And send it
 
+SdCmndFast:
+        clr     w14                     ; Clear CRC values
+        clr     CRCWDATL
+        rcall   SpiFast                 ; Send command byte
+        lsr     w1,#8,w0
+        rcall   SpiFast                 ; Send MSB of argument
+        ze      w1,w0
+        rcall   SpiFast
+        lsr     w2,#8,w0
+        rcall   SpiFast
+        ze      w2,w0
+        rcall   SpiFast                 ; Send LSB of argument
+        bset    SR,#C                   ; Form CRC7 byte
+        addc.b  w14,w14,w0
+        bra     SpiFast                 ; And send it
+
 ; Send an dummy byte to the card and check if the result byte matches w1 or a
 ; timeout is reached. Return with Z=1 if a match is found.
 
@@ -998,11 +1063,26 @@ SdWaitSlow:
         bclr    SR,#Z                   ; Force Z=0
         return
         
+SdWaitFast:
+        mov     #0xff,w2                ; Set timeout counter
+1:      rcall   SdIdleFast              ; Send a dummy byte
+        cp.b    w0,w1                   ; Result matches?
+        bra     nz,2f
+        return                          ; Yes, Z=1
+2:      dec     w2,w2                   ; Reduce counter
+        bra     nz,1b
+        bclr    SR,#Z                   ; Force Z=0
+        return
+        
 ; Send an all HI dummy byte to the SD card and return the byte it send back.
         
 SdIdleSlow:
         mov     #0xff,w0
         bra     SpiSlow
+        
+SdIdleFast:
+        mov     #0xff,w0
+        bra     SpiFast
 	
 ;===============================================================================
 ; SD/MMC Manager
@@ -1013,6 +1093,12 @@ DiskManager:
         
         rcall   SdInit
         
+        
+        
+        mov     #BLK0,w1
+        clr     w2
+        clr     w3
+        rcall   SdRead
         
         
         nop
