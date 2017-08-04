@@ -2,7 +2,7 @@
 
 EM-RETRO is a emulator for eight early 8-bit microprocessors based on a modern
 16-bit micro-controller. Currently the emulations for the SC/MP, CDP 1802, 6800,
-6502, 65C02 and 8080 are complete and working. The code for the Z80 and 6809
+6502, 65C02 and 8080 are complete. Some need a boot ROM. The code for the Z80 and 6809
 is not yet fully functional.
 
 All you need to play with EM-RETRO is a PIC24EP512GP202 micro-controller, three
@@ -98,7 +98,7 @@ system although this not available yet.
 
 The 6502 emulator has been configured to boot as a virtual BBC Microcomputer
 and contains a copy of BBC BASIC along with a simulation of enough of the
-Acorn Machine Operating System (MOS) to persude it to work.
+Acorn Machine Operating System (MOS) to persuade it to work.
 
 #### Memory Map
 
@@ -163,7 +163,21 @@ is used to pass data.
 
 ### Intel 8080
 
+#### Memory Map
+
+| From | To   | Contents        |
+| ---- | ---- | --------------- |
+| 0000 | afff | RAM             |
+| b000 | ffff | ROM             |
+
 ### Zilog Z80
+
+#### Memory Map
+
+| From | To   | Contents        |
+| ---- | ---- | --------------- |
+| 0000 | afff | RAM             |
+| b000 | ffff | ROM             |
 
 ### Motorola 6809
 
