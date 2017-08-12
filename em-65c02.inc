@@ -833,12 +833,20 @@
         .endm
 
         .macro  OP_WAI
-        dec     R_PC,R_PC
+	btss	INT_FLAGS,#INT_DETECTED	; Has an interrupt been detected?
+	bra	1f			; No.
+	bclr	INT_FLAGS,#INT_WAITING	; Yes, no longer waiting
+	bra	2f
+
+1:	bclr	INT_FLAGS,#INT_DETECTED	; Clear detection flag
+	bset	INT_FLAGS,#INT_WAITING	; .. and mark as waiting
+	dec     R_PC,R_PC		; Repeat WAI until detection
+2:
         .endm
 
         .macro  OP_COP
         RD_ADDR w2,ze,w3                ; Read the immediate byte
-        and     w3,#15,w3
+        and     w3,#7,w3
         bra     w3                      ; And branch to operation
 
         bra     0f                      ; Read interrupt flags
@@ -849,14 +857,6 @@
         bra     5f                      ; Receive character
         bra     6f                      ; Clear interrupt flag
         bra     7f
-        bra     8f
-        bra     9f
-        bra     10f
-        bra     11f
-        bra     12f
-        bra     13f
-        bra     14f
-        bra     15f
 
 0:      mov.b   INT_FLAGS,WREG		; Read the interrupt flags
         ze      w0,R_A
@@ -890,14 +890,5 @@
         bra     99f
 
 7:
-8:
-9:
-10:
-11:
-12:
-13:
-14:
-15:
-
 99:
         .endm

@@ -187,4 +187,6 @@
         .equiv  INT_UART_RX,    1
         .equiv  INT_UART_TX,    2
 
-        .equiv  INT_NMI,        15              ; Falling edge on IN1
+        .equiv  INT_NMI,        8		; Falling edge on IN1
+	.equiv	INT_WAITING,	14		; Waiting for interrupt
+	.equiv	INT_DETECTED,	15		; Interrupt detected

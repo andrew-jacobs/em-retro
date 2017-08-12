@@ -43,10 +43,10 @@
         .extern PutStr
 EM_6800:
         call    PutStr
-        .asciz  "EM-6800 [16.07]\r\n"
+        .asciz  "EM-6800 [17.08]\r\n"
 
         mov     #MEMORY_MAP,M_BASE      ; Initialise memory map
-        mov     #0xc000,M_FLAG          ; .. and read-only flags
+        mov     #0xc300,M_FLAG          ; .. and read-only flags
         mov     #0x0fff,M_MASK
 
         mov     #edspage(RAM1),w1       ; RAM  0x0000-0x0fff
@@ -126,7 +126,8 @@ Reset:
         swap    R_PC                    ; .. and load PC
         ior     R_PC,w3,R_PC
 
-; Load reset vector
+        bset    R_P,#F_I                ; Initialise flag register
+        ior     #0x00c0,R_P             ; And force 1 bits
 
         clr     CYCLE
 Run:
@@ -138,8 +139,112 @@ Run:
 
 ;-------------------------------------------------------------------------------
 
+DoNMI:
+        bset    INT_FLAGS,#INT_DETECTED ; Set flag to exit WAI
+        bclr    INT_FLAGS,#INT_NMI      ; Clear the NMI flag
+       
+        mov     R_PC,w3                 ; Push PC
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        swap    w3
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        mov     R_X,w3                  ; Push X
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        swap    w3
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        WR_ADDR R_SP,R_A                ; Push A
+        dec     R_SP,R_SP
+        WR_ADDR R_SP,R_B                ; Push B
+        dec     R_SP,R_SP
+        bclr    R_P,#F_C                ; Copy native flags into P
+        bclr    R_P,#F_Z
+        bclr    R_P,#F_N
+        bclr    R_P,#F_V
+        bclr    R_P,#F_H
+        btsc    R_SR,#C
+        bset    R_P,#F_C
+        btsc    R_SR,#Z
+        bset    R_P,#F_Z
+        btsc    R_SR,#N
+        bset    R_P,#F_N
+        btsc    R_SR,#OV
+        bset    R_P,#F_V
+        btsc    R_SR,#DC
+        bset    R_P,#F_H
+        ior     #0x00c0,R_P             ; And force 1 bits
+        WR_ADDR R_SP,R_P                ; Push P
+        dec     R_SP,R_SP
+        bset    R_P,#F_I                ; Set interrupt disable
+        mov     #0xfffc,w2              ; Read NMI vector
+        RD_ADDR w2,ze,R_PC
+        inc     w2,w2
+	swap	R_PC
+        RD_ADDR w2,ze,w3              
+        ior     R_PC,w3,R_PC		; Form new PC
+        retlw   #7,w0
+          
+DoIRQ:
+        mov     R_PC,w3                 ; Push PC
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        swap    w3
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        mov     R_X,w3                  ; Push X
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        swap    w3
+        WR_ADDR R_SP,w3
+        dec     R_SP,R_SP
+        WR_ADDR R_SP,R_A                ; Push A
+        dec     R_SP,R_SP
+        WR_ADDR R_SP,R_B                ; Push B
+        dec     R_SP,R_SP
+        bclr    R_P,#F_C                ; Copy native flags into P
+        bclr    R_P,#F_Z
+        bclr    R_P,#F_N
+        bclr    R_P,#F_V
+        bclr    R_P,#F_H
+        btsc    R_SR,#C
+        bset    R_P,#F_C
+        btsc    R_SR,#Z
+        bset    R_P,#F_Z
+        btsc    R_SR,#N
+        bset    R_P,#F_N
+        btsc    R_SR,#OV
+        bset    R_P,#F_V
+        btsc    R_SR,#DC
+        bset    R_P,#F_H
+        ior     #0x00c0,R_P             ; And force 1 bits
+        WR_ADDR R_SP,R_P                ; Push P
+        dec     R_SP,R_SP
+        bset    R_P,#F_I                ; Set interrupt disable
+        mov     #0xfff8,w2              ; Read IRQ vector
+        RD_ADDR w2,ze,R_PC
+        inc     w2,w2
+	swap	R_PC
+        RD_ADDR w2,ze,w3              
+        ior     R_PC,w3,R_PC		; Form new PC
+        retlw   #7,w0
+        
+;-------------------------------------------------------------------------------
+        
 Step:
-        RD_ADDR R_PC,ze,w3              ; Fetch the next opcode
+        mov     INT_FLAGS,WREG          ; Load pseudo interrupt flags
+        btsc    w0,#INT_NMI             ; Has there been an NMI?
+        bra     DoNMI                   ; Yes, go handle it
+
+        and     INT_ENABLE,WREG         ; Check interrupts to handle?
+        bra     z,1f                    ; No
+        
+        bset    INT_FLAGS,#INT_DETECTED ; Set flag to exit WAI
+        btsc    R_P,#F_I                ; Are interrupts disabled?
+        bra     DoIRQ                   ; No handle them
+ 
+1:      RD_ADDR R_PC,ze,w3              ; Fetch the next opcode
         inc     R_PC,R_PC               ; .. incrementing the PC
         bra     w3                      ; And execute it
 

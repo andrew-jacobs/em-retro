@@ -8,14 +8,20 @@
 ;
 ; MOS 6502 Emulation Host Interface Macros
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2016 HandCoded Software Ltd.
+; Copyright (C)2015 HandCoded Software Ltd.
 ; All rights reserved.
 ;
-; This work is made available under the terms of the Creative Commons
-; Attribution-NonCommercial-ShareAlike 4.0 International license. Open the
-; following URL to see the details.
+; This software is the confidential and proprietary information of HandCoded
+; Software Ltd. ("Confidential Information").  You shall not disclose such
+; Confidential Information and shall use it only in accordance with the terms
+; of the license agreement you entered into with HandCoded Software.
 ;
-; http://creativecommons.org/licenses/by-nc-sa/4.0/
+; HANDCODED SOFTWARE MAKES NO REPRESENTATIONS OR WARRANTIES ABOUT THE
+; SUITABILITY OF THE SOFTWARE, EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT
+; LIMITED TO THE IMPLIED WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+; PARTICULAR PURPOSE, OR NON-INFRINGEMENT. HANDCODED SOFTWARE SHALL NOT BE
+; LIABLE FOR ANY DAMAGES SUFFERED BY LICENSEE AS A RESULT OF USING, MODIFYING
+; OR DISTRIBUTING THIS SOFTWARE OR ITS DERIVATIVES.
 ;-------------------------------------------------------------------------------
 ;
 ; Notes:
@@ -27,12 +33,27 @@
 ;-------------------------------------------------------------------------------
 
 		.list
-		
+;===============================================================================
+;-------------------------------------------------------------------------------
+
+; Pseudo Operations
+
+CMD_IFR		.equ	0
+CMD_IFW		.equ	1
+CMD_IER		.equ	2
+CMD_IEW		.equ	3
+CMD_TXD		.equ	4
+CMD_RXD		.equ	5
+CMD_CLR		.equ	6
+
 ; Interrupt flag masks
 
 INT_100HZ	.equ	1<<0
 INT_UART_RX	.equ	1<<1
 INT_UART_TX	.equ	1<<2
+
+;===============================================================================
+;-------------------------------------------------------------------------------
 
 ;  Read the interrupt flags into A
 

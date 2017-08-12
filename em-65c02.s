@@ -42,7 +42,7 @@
         .extern PutStr
 EM_65C02:
         call    PutStr
-        .asciz  "EM-65C02 [15.07]\r\n"
+        .asciz  "EM-65C02 [17.08]\r\n"
 
         clr     TMR1                    ; Configure the CYCLE Timer
         mov     #TMR1_2MHZ,w0           ; .. for 2MHz
@@ -148,6 +148,7 @@ Run:
 ;-------------------------------------------------------------------------------
 
 DoNMI:
+        bset    INT_FLAGS,#INT_DETECTED ; Set flag to exit WAI
         bclr    INT_FLAGS,#INT_NMI      ; Clear the NMI flag
 
         swap    R_PC                    ; Push PC MSB
@@ -216,12 +217,14 @@ Step:
         btsc    w0,#INT_NMI             ; Has there been an NMI?
         bra     DoNMI                   ; Yes, go handle it
 
+        and     INT_ENABLE,WREG         ; Check interrupts to handle?
+        bra     z,1f                    ; No
+        
+        bset    INT_FLAGS,#INT_DETECTED ; Set flag to exit WAI
         btsc    R_P,#F_I                ; Are interrupts disabled?
-        clr     w0                      ; Yes, clear all the flags
-        and     INT_ENABLE,WREG         ; Check if any are enabled
-        bra     nz,DoIRQ                ; If non-zero, handle them
+        bra     DoIRQ                   ; No handle them
 
-        RD_ADDR R_PC,ze,w3              ; Fetch the retlw   #0,w0 opcode
+1:      RD_ADDR R_PC,ze,w3              ; Fetch the opcode
         inc     R_PC,R_PC               ; .. incrementing the PC
         bra     w3                      ; And execute it
 

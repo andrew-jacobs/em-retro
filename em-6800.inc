@@ -722,7 +722,8 @@
         bset    R_P,#F_V
         btsc    R_SR,#DC
         bset    R_P,#F_H
-        WR_ADDR R_SP,R_P                ; Push P
+        ior     #0x00c0,R_P             ; And force 1 bits
+	WR_ADDR R_SP,R_P                ; Push P
         dec     R_SP,R_SP
         bset    R_P,#F_I                ; Set interrupt disable
         mov     #0xfffa,w2              ; Read SWI vector
@@ -812,36 +813,64 @@
         .endm
 
         .macro  OP_WAI
-        dec     R_PC,R_PC
+	btss	INT_FLAGS,#INT_DETECTED	; Has an interrupt been detected?
+	bra	1f			; No.
+	bclr	INT_FLAGS,#INT_WAITING	; Yes, no longer waiting
+	bra	2f
+
+1:	bclr	INT_FLAGS,#INT_DETECTED	; Clear detection flag
+	bset	INT_FLAGS,#INT_WAITING	; .. and mark as waiting
+	dec     R_PC,R_PC		; Repeat WAI until detection
+2:
         .endm
 
 ;-------------------------------------------------------------------------------
 
         .macro  OP_SYS,ACC
         RD_ADDR w2,ze,w3                ; Read command byte
-        and     #0x07,w3                ; Limit to 16 values
-        bra     w3
+        and     w3,#0x07,w3
+        bra     w3			; And branch to operation
 
-        bra     99f                     ; NOP
-        bra     1f                      ; RXD
-        bra     2f
-        bra     3f
-        bra     4f
-        bra     99f
-        bra     99f
-        bra     99f
+        bra     0f                      ; Read interrupt flags
+        bra     1f                      ; Write interrupt flags
+        bra     2f                      ; Read enable flags
+        bra     3f                      ; Write enable flags
+        bra     4f                      ; Transmit character
+        bra     5f                      ; Receive character
+        bra     6f                      ; Clear interrupt flag
+        bra     7f
 
-1:      call    UartRx                  ; Receive a byte
+0:      mov.b   INT_FLAGS,WREG		; Read the interrupt flags
         ze      w0,\ACC
         bra     99f
 
-2:      bra     99f
-
-3:      ze      \ACC,w0                 ; Transmit a byte
-        call    UartTx
+1:      mov     \ACC,w0			; Write the interrupt flags
+        mov.b   WREG,INT_FLAGS
         bra     99f
 
-4:
+2:      mov.b   INT_ENABLE,WREG		; Read the enable flags
+        ze      w0,\ACC
+        bra     99f
 
+3:      mov     \ACC,w0			; Write the enable flags
+        mov.b   WREG,INT_ENABLE
+        bra     99f
+
+4:      bclr    INT_FLAGS,#INT_UART_TX	; Clear the interrupt
+        ze      \ACC,w0			; Transmit from A or B
+	mov     w0,U1TXREG
+        bset    IEC0,#U1TXIE            ; Ensure TX enabled
+        bra     99f
+
+5:	bclr    INT_FLAGS,#INT_UART_RX  ; Clear the interrupt
+        mov     U1RXREG,w0		; Receive into A or B
+        ze      w0,\ACC
+        bra     99f
+
+6:      com     \ACC,w0			; Clear interrupt flag(s)
+        and.b   INT_FLAGS
+        bra     99f
+
+7:
 99:
         .endm

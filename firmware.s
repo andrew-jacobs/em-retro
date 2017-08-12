@@ -334,11 +334,13 @@ __reset:
         rcall   PutStr
         .asciz  " | |___| |  | |_____|  _ <  __/ |_| | | (_) |\r\n"
         rcall   PutStr
-        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [16.07]\r\n"
+        .asciz  " |_____|_|  |_|     |_| \\_\\___|\\__|_|  \\___/   [17.08]\r\n"
         rcall   PutStr
-        .asciz  "\r\n Copyright (C),2014-2016 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
+        .asciz  "\r\n Copyright (C),2014-2017 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
         rcall   AttrNorm
 
+   goto EM_6800
+   
         btsc    SW_PORT,#SW_PIN         ; Is the user switch pressed?
         bra     ReadJumpers             ; No, boot default emulation
 
@@ -545,7 +547,7 @@ ReadJumpers:
         bset    w0,#2
         .if     REV_1502
         btsc    JP3_PORT,#JP3_PIN
-        bset    w0,#3
+        bset    w0,#4
         .endif
 
 ; Use the jump index in W0 to start the required emulation.

@@ -6,3 +6,4 @@
 /disassembly
 /code/scmp/forth/*.obj
 /code/1802/forth/forth.obj
+/code/6800/weevil/*.obj

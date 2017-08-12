@@ -57,7 +57,7 @@ arrive.
 | Hex | Opcode | Description            |
 | --- | ------ | ---------------------- |
 | 20  | TXD    | Transmit the character |
-| 21  | RXD    | Receive a characater   |
+| 21  | RXD    | Receive a character    |
 
 ### RCA CDP 1802
 
@@ -94,6 +94,22 @@ system although this not available yet.
 | 8f nn | SYS A #nn | Invoke System Function |
 | cf nn | SYS B #nn | Invoke System Function |
 
+| Operation | Description                  |
+|:---------:| ---------------------------- |
+| 00        | Read Interrupt Flags         |
+| 01        | Write Interrupt Flags        |
+| 02        | Read Interrupt Enable Flags  |
+| 03        | Write Interrupt Enable Flags |
+| 04        | UART Transmit                |
+| 05        | UART Recieve                 |
+| 06        | Clear Interrupt Flag Bit     |
+
+| Bit | Description          |
+| --- | ---------------------|
+| 0   | 100Hz Timer          |
+| 1   | UART RX Buffer Full  |
+| 2   | UART TX Buffer Empty |
+
 ### MOS 6502
 
 The 6502 emulator has been configured to boot as a virtual BBC Microcomputer
@@ -125,6 +141,12 @@ is used to pass data.
 | 04        | UART Transmit                |
 | 05        | UART Recieve                 |
 | 06        | Clear Interrupt Flag Bit     |
+
+| Bit | Description          |
+| --- | ---------------------|
+| 0   | 100Hz Timer          |
+| 1   | UART RX Buffer Full  |
+| 2   | UART TX Buffer Empty |
 
 An additional instruction ($bb -- BNK) is reserved to switch the 16K banked
 ROM area. This isn't currently implemented so the FORTH and LISP images in
@@ -160,6 +182,12 @@ is used to pass data.
 | 04        | UART Transmit                |
 | 05        | UART Recieve                 |
 | 06        | Clear Interrupt Flag Bit     |
+
+| Bit | Description          |
+| --- | ---------------------|
+| 0   | 100Hz Timer          |
+| 1   | UART RX Buffer Full  |
+| 2   | UART TX Buffer Empty |
 
 ### Intel 8080
 

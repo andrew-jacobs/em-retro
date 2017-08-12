@@ -1,0 +1,15 @@
+Global Symbol Map
+
+
+
+Sections:
+
+.bss             : 0000A000 - 0000A02D in weevil.obj
+.code            : 0000E000 - 0000E00E in weevil.obj
+                   0000E067 - 0000E06A in weevil.obj
+                   0000E06B - 0000E074 in weevil.obj
+                   0000E075 - 0000E07A in weevil.obj
+                   0000E07B - 0000E084 in weevil.obj
+                   0000E400 - 0000E575 in weevil.obj
+                   0000FD00 - 0000FFEE in weevil.obj
+                   0000FFF8 - 0000FFFF in weevil.obj

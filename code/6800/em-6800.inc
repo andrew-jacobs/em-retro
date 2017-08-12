@@ -31,25 +31,36 @@
 ;
 ; 2015-01-04 AJ Initial version
 ;-------------------------------------------------------------------------------
-; $Id$
-;-------------------------------------------------------------------------------
 
 		.list
+;===============================================================================
+; Pseudo Operations and Flags
+;-------------------------------------------------------------------------------
 
-CMD_NOP		.equ	$00
-CMD_RXD		.equ	$01
-CMD_RXD_COUNT	.equ	$02
-CMD_TXD		.equ	$03
-CMD_TXD_COUNT	.equ	$04
-CMD_SPI_LO	.equ	$05
-CMD_SPI_HI	.equ	$06
-CMD_SPI		.equ	$07
+; Pseudo Operations
 
+CMD_IFR		.equ	0
+CMD_IFW		.equ	1
+CMD_IER		.equ	2
+CMD_IEW		.equ	3
+CMD_TXD		.equ	4
+CMD_RXD		.equ	5
+CMD_CLR		.equ	6
+		
+; Interrupt flag masks
 
-SYS_CMDA	.macro	CMD
+INT_100HZ	.equ	1<<0
+INT_UART_RX	.equ	1<<1
+INT_UART_TX	.equ	1<<2
+
+;===============================================================================
+; Macros for Pseudo Instructions
+;-------------------------------------------------------------------------------
+
+SYS_A		.macro	CMD
 		.byte	$8F,CMD
 		.endm
 		
-SYS_CMDB	.macro	CMD
+SYS_B		.macro	CMD
 		.byte	$CF,CMD
 		.endm
