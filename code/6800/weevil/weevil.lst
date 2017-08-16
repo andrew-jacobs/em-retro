@@ -78,8 +78,13 @@ Portable Motorola 6800 Assembler [17.08]
                             ; ASCII Control Codes
                             
         00000004          = EOT             .equ    $04
+        00000007          = BEL             .equ    $07
+        00000008          = BS              .equ    $08
         0000000A          = LF              .equ    $0a
         0000000D          = CR              .equ    $0d
+        00000011          = DC1             .equ    $11
+        00000013          = DC3             .equ    $13
+        0000007F          = DEL             .equ    $7f
                             
                             ; Opcode Indexes
                             
@@ -107,14 +112,14 @@ Portable Motorola 6800 Assembler [17.08]
         0000003F          = OP_BSR          .equ    63
         00000042          = OP_BVC          .equ    66
         00000045          = OP_BVS          .equ    69
+
+Portable Motorola 6800 Assembler [17.08]
+
         00000048          = OP_CBA          .equ    72
         0000004B          = OP_CLC          .equ    75
         0000004E          = OP_CLI          .equ    78
         00000051          = OP_CLR          .equ    81
         00000054          = OP_CLV          .equ    84
-
-Portable Motorola 6800 Assembler [17.08]
-
         00000057          = OP_CMP          .equ    87
         0000005A          = OP_COM          .equ    90
         0000005D          = OP_CPX          .equ    93
@@ -164,14 +169,14 @@ Portable Motorola 6800 Assembler [17.08]
         00000040          = AM_A            .equ    $40
         00000080          = AM_B            .equ    $80
                             
+
+Portable Motorola 6800 Assembler [17.08]
+
         00000000          = AM_INH          .equ    $00
         00000001          = AM_DPG          .equ    $01
         00000011          = AM_IDX          .equ    $11
         00000021          = AM_REL          .equ    $21
         00000031          = AM_IMB          .equ    $31
-
-Portable Motorola 6800 Assembler [17.08]
-
         00000002          = AM_IMW          .equ    $02
         00000012          = AM_EXT          .equ    $12
                             
@@ -191,9 +196,14 @@ Portable Motorola 6800 Assembler [17.08]
 00A00A  00                : OPCODE:         .space  1
 00A00B  00                : MODE:           .space  1
 00A00C  0000              : TEMP:           .space  2
+00A00E  00                : CMDLEN:         .space  1
                             
-00A00E  0000000000000000> :                 .space  32
+                            
+00A00F  0000000000000000> :                 .space  32
                             STACK:
+                            
+00A02F  0000000000000000> : BUFFER:         .space  128
+                            
                             
                             ;===============================================================================
                             ; Interrupt Handlers
@@ -216,6 +226,9 @@ Portable Motorola 6800 Assembler [17.08]
                             
                             ;-------------------------------------------------------------------------------
                             
+
+Portable Motorola 6800 Assembler [17.08]
+
                                             .org    $e067           ; MikBug OUTHL
                             OutHexHi:
 00E067  44                :                 lsr a
@@ -226,17 +239,14 @@ Portable Motorola 6800 Assembler [17.08]
                                             .org    $e06b           ; MikBug OUTHR
                             OutHexLo:
 00E06B  840F              :                 and a   #$0f
-
-Portable Motorola 6800 Assembler [17.08]
-
 00E06D  8A30              :                 ora a   #'0'
 00E06F  8139              :                 cmp a   #'9'
 00E071  2302              :                 bls     OutChar
 00E073  8B07              :                 add a   #7
                             
                                             .org    $e075           ; MikBug OUTCH & INCH
-00E075  7EE562            : OutChar         jmp     UartTx
-00E078  7EE56D            : InChar          jmp     UartRx
+00E075  7EE5C9            : OutChar         jmp     UartTx
+00E078  7EE5D4            : InChar          jmp     UartRx
                             
                             
                                             .org    $e07b           ; MikBug PDATA1
@@ -256,22 +266,26 @@ Portable Motorola 6800 Assembler [17.08]
                                             .org    $e400
                             RESET:
 00E400  0F                :                 sei                     ; Ensure interrupts are disabled
-00E401  8EA02E            :                 lds     #STACK
-00E404  CEE41C            :                 ldx     #DummyHandler
+00E401  8EA02F            :                 lds     #STACK
+00E404  CEE41F            :                 ldx     #DummyHandler
 00E407  FFA002            :                 stx     NMIV
 00E40A  FFA000            :                 stx     IRQV
-00E40D  CEE539            :                 ldx     #DebugHandler
+00E40D  CEE542            :                 ldx     #DebugHandler
 00E410  FFA004            :                 stx     SWIV
                             
-00E413  CEFFDE            :                 ldx     #SPLASH
-00E416  BDE07E            :                 jsr     OutStr
+00E413  BDE527            :                 jsr     NewLine
+00E416  CEFFDE            :                 ldx     #SPLASH
+00E419  BDE07E            :                 jsr     OutStr
                             
-00E419  3F                : .Loop           swi                     ; Enter the debugger
-00E41A  20FD              :                 bra     .Loop
+00E41C  3F                : .Loop           swi                     ; Enter the debugger
+00E41D  20FD              :                 bra     .Loop
                             
                             DummyHandler:
-00E41C  3B                :                 rti
+00E41F  3B                :                 rti
                             
+
+Portable Motorola 6800 Assembler [17.08]
+
                             ;===============================================================================
                             ; Output Utilities
                             ;-------------------------------------------------------------------------------
@@ -280,240 +294,309 @@ Portable Motorola 6800 Assembler [17.08]
                             ; memory pointer to allow subsequent byte and opcode display.
                             
                             ShowPC:
-00E41D  FEA006            :                 ldx     SP              ; Handle the PC MSB
-00E420  A606              :                 lda a   6,x
-00E422  B7A008            :                 sta a   MPTR+0
-
-Portable Motorola 6800 Assembler [17.08]
-
-00E425  8D73              :                 bsr     OutHex2 
-00E427  A607              :                 lda a   7,x             ; .. the the PC LSB
-00E429  B7A009            :                 sta a   MPTR+1
-00E42C  206C              :                 bra     OutHex2
+00E420  FEA006            :                 ldx     SP              ; Handle the PC MSB
+00E423  A606              :                 lda a   6,x
+00E425  B7A008            :                 sta a   MPTR+0
+00E428  8D73              :                 bsr     OutHex2 
+00E42A  A607              :                 lda a   7,x             ; .. the the PC LSB
+00E42C  B7A009            :                 sta a   MPTR+1
+00E42F  206C              :                 bra     OutHex2
                             
                             ; Fetch the status register from the stack and then display its value as
                             ; individual bits.
                             
                             ShowP:
-00E42E  CEE524            :                 ldx     #P_STR
-00E431  BDE07E            :                 jsr     OutStr
-00E434  FEA006            :                 ldx     SP
-00E437  E601              :                 lda b   1,x
-00E439  8631              :                 lda a   #'1'
-00E43B  8D1A              :                 bsr     ShowBit
-00E43D  8631              :                 lda a   #'1'
-00E43F  8D16              :                 bsr     ShowBit
-00E441  8648              :                 lda a   #'H'
-00E443  8D12              :                 bsr     ShowBit
-00E445  8649              :                 lda a   #'I'
-00E447  8D0E              :                 bsr     ShowBit
-00E449  864E              :                 lda a   #'N'
-00E44B  8D0A              :                 bsr     ShowBit
-00E44D  865A              :                 lda a   #'Z'
-00E44F  8D06              :                 bsr     ShowBit
-00E451  8656              :                 lda a   #'V'
-00E453  8D02              :                 bsr     ShowBit
-00E455  8643              :                 lda a   #'C'
+00E431  CEE52D            :                 ldx     #P_STR
+00E434  BDE07E            :                 jsr     OutStr
+00E437  FEA006            :                 ldx     SP
+00E43A  E601              :                 lda b   1,x
+00E43C  8631              :                 lda a   #'1'
+00E43E  8D1A              :                 bsr     ShowBit
+00E440  8631              :                 lda a   #'1'
+00E442  8D16              :                 bsr     ShowBit
+00E444  8648              :                 lda a   #'H'
+00E446  8D12              :                 bsr     ShowBit
+00E448  8649              :                 lda a   #'I'
+00E44A  8D0E              :                 bsr     ShowBit
+00E44C  864E              :                 lda a   #'N'
+00E44E  8D0A              :                 bsr     ShowBit
+00E450  865A              :                 lda a   #'Z'
+00E452  8D06              :                 bsr     ShowBit
+00E454  8656              :                 lda a   #'V'
+00E456  8D02              :                 bsr     ShowBit
+00E458  8643              :                 lda a   #'C'
                             
                             ; Rotate a bit out of the status register in B. If it is clear the change the
                             ; flag character to a full stop.
                             
                             ShowBit:
-00E457  59                :                 rol b
-00E458  2502              :                 bcs     .Skip
-00E45A  862E              :                 lda a   #'.'
-00E45C  7EE562            : .Skip           jmp     UartTx
+00E45A  59                :                 rol b
+00E45B  2502              :                 bcs     .Skip
+00E45D  862E              :                 lda a   #'.'
+00E45F  7EE5C9            : .Skip           jmp     UartTx
                             
                             ShowA:
-00E45F  CEE528            :                 ldx     #A_STR
-00E462  BDE07E            :                 jsr     OutStr
-00E465  FEA006            :                 ldx     SP
-00E468  A603              :                 lda a   3,x
-00E46A  202E              :                 bra     OutHex2
+00E462  CEE531            :                 ldx     #A_STR
+00E465  BDE07E            :                 jsr     OutStr
+00E468  FEA006            :                 ldx     SP
+00E46B  A603              :                 lda a   3,x
+
+Portable Motorola 6800 Assembler [17.08]
+
+00E46D  202E              :                 bra     OutHex2
                             
                             ShowB:
-00E46C  CEE52C            :                 ldx     #B_STR
-00E46F  BDE07E            :                 jsr     OutStr
-00E472  FEA006            :                 ldx     SP
-00E475  A602              :                 lda a   2,x
-00E477  2021              :                 bra     OutHex2
+00E46F  CEE535            :                 ldx     #B_STR
+00E472  BDE07E            :                 jsr     OutStr
+00E475  FEA006            :                 ldx     SP
+00E478  A602              :                 lda a   2,x
+00E47A  2021              :                 bra     OutHex2
                             
                             ShowX:
-00E479  CEE530            :                 ldx     #X_STR
-
-Portable Motorola 6800 Assembler [17.08]
-
-00E47C  BDE07E            :                 jsr     OutStr
-00E47F  FEA006            :                 ldx     SP
-00E482  A604              :                 lda a   4,x
-00E484  8D14              :                 bsr     OutHex2
-00E486  A605              :                 lda a   5,x
-00E488  2010              :                 bra     OutHex2
+00E47C  CEE539            :                 ldx     #X_STR
+00E47F  BDE07E            :                 jsr     OutStr
+00E482  FEA006            :                 ldx     SP
+00E485  A604              :                 lda a   4,x
+00E487  8D14              :                 bsr     OutHex2
+00E489  A605              :                 lda a   5,x
+00E48B  2010              :                 bra     OutHex2
                             
                             ShowSP:
-00E48A  CEE534            :                 ldx     #SP_STR
-00E48D  BDE07E            :                 jsr     OutStr
-00E490  B6A006            :                 lda a   SP+0
-00E493  8D05              :                 bsr     OutHex2
-00E495  B6A007            :                 lda a   SP+1
-00E498  2000              :                 bra     OutHex2
+00E48D  CEE53D            :                 ldx     #SP_STR
+00E490  BDE07E            :                 jsr     OutStr
+00E493  B6A006            :                 lda a   SP+0
+00E496  8D05              :                 bsr     OutHex2
+00E498  B6A007            :                 lda a   SP+1
+00E49B  2000              :                 bra     OutHex2
                             
                             OutHex2:
-00E49A  36                :                 psh a
-00E49B  BDE067            :                 jsr     OutHexHi
-00E49E  32                :                 pul a
-00E49F  7EE06B            :                 jmp     OutHexLo
+00E49D  36                :                 psh a
+00E49E  BDE067            :                 jsr     OutHexHi
+00E4A1  32                :                 pul a
+00E4A2  7EE06B            :                 jmp     OutHexLo
                             
                             FetchOpcode:
-00E4A2  FEA008            :                 ldx     MPTR            ; Fetch the target opcode
-00E4A5  C6FD              :                 lda b   #>OPCODES       ; And calculate description address
-00E4A7  A600              :                 lda a   0,x
-00E4A9  48                :                 asl a
-00E4AA  2401              :                 bcc     .Skip
-00E4AC  5C                :                 inc b
-00E4AD  F7A00C            : .Skip           sta b   TEMP+0          ; Load into X
-00E4B0  B7A00D            :                 sta a   TEMP+1
-00E4B3  FEA00C            :                 ldx     TEMP
-00E4B6  A600              :                 lda a   0,x             ; And fetch the description
-00E4B8  B7A00A            :                 sta a   OPCODE
-00E4BB  A601              :                 lda a   1,x
-00E4BD  B7A00B            :                 sta a   MODE
-00E4C0  39                :                 rts
+00E4A5  FEA008            :                 ldx     MPTR            ; Fetch the target opcode
+00E4A8  C6FD              :                 lda b   #>OPCODES       ; And calculate description address
+00E4AA  A600              :                 lda a   0,x
+00E4AC  48                :                 asl a
+00E4AD  2401              :                 bcc     .Skip
+00E4AF  5C                :                 inc b
+00E4B0  F7A00C            : .Skip           sta b   TEMP+0          ; Load into X
+00E4B3  B7A00D            :                 sta a   TEMP+1
+00E4B6  FEA00C            :                 ldx     TEMP
+00E4B9  A600              :                 lda a   0,x             ; And fetch the description
+00E4BB  B7A00A            :                 sta a   OPCODE
+00E4BE  A601              :                 lda a   1,x
+00E4C0  B7A00B            :                 sta a   MODE
+00E4C3  39                :                 rts
                             
                             ShowBytes:
-00E4C1  FEA008            :                 ldx     MPTR
-00E4C4  F6A00B            :                 lda b   MODE
-00E4C7  C403              :                 and b   #$03
-00E4C9  8D1C              :                 bsr     Space
-00E4CB  A600              :                 lda a   0,x
-00E4CD  8DCB              :                 bsr     OutHex2
-00E4CF  5A                :                 dec b
-00E4D0  2B0F              :                 bmi     .Blank2
-00E4D2  8D13              :                 bsr     Space
-00E4D4  A601              :                 lda a   1,x
-00E4D6  8DC2              :                 bsr     OutHex2
-00E4D8  5A                :                 dec b
-00E4D9  2B08              :                 bmi     .Blank1
-00E4DB  8D0A              :                 bsr     Space
-00E4DD  A602              :                 lda a   2,x
-00E4DF  20B9              :                 bra     OutHex2
+00E4C4  FEA008            :                 ldx     MPTR
+00E4C7  F6A00B            :                 lda b   MODE
+00E4CA  C403              :                 and b   #$03
+00E4CC  8D1C              :                 bsr     Space
+00E4CE  A600              :                 lda a   0,x
 
 Portable Motorola 6800 Assembler [17.08]
 
+00E4D0  8DCB              :                 bsr     OutHex2
+00E4D2  5A                :                 dec b
+00E4D3  2B0F              :                 bmi     .Blank2
+00E4D5  8D13              :                 bsr     Space
+00E4D7  A601              :                 lda a   1,x
+00E4D9  8DC2              :                 bsr     OutHex2
+00E4DB  5A                :                 dec b
+00E4DC  2B08              :                 bmi     .Blank1
+00E4DE  8D0A              :                 bsr     Space
+00E4E0  A602              :                 lda a   2,x
+00E4E2  20B9              :                 bra     OutHex2
                                             
-00E4E1  8D00              : .Blank2:        bsr     .Blank1
-00E4E3  8D02              : .Blank1:        bsr     Space
-00E4E5  8D00              :                 bsr     Space
+00E4E4  8D00              : .Blank2:        bsr     .Blank1
+00E4E6  8D02              : .Blank1:        bsr     Space
+00E4E8  8D00              :                 bsr     Space
                             
                             Space:
-00E4E7  8620              :                 lda a   #' '
-00E4E9  7EE562            :                 jmp     UartTx
+00E4EA  8620              :                 lda a   #' '
+00E4EC  7EE5C9            :                 jmp     UartTx
                             
                             ShowOpcode:
-00E4EC  C6FF              :                 lda b   #>MNEMONICS     ; Work out mnemonic address
-00E4EE  8600              :                 lda a   #<MNEMONICS
-00E4F0  BBA00A            :                 add a   OPCODE
-00E4F3  F7A00C            :                 sta b   TEMP+0          ; And transfer to X
-00E4F6  B7A00D            :                 sta a   TEMP+1
-00E4F9  FEA00C            :                 ldx     TEMP
-00E4FC  8DE9              :                 bsr     Space           ; Output initial space
-00E4FE  A600              :                 lda a   0,x             ; Then the opcode
-00E500  BDE562            :                 jsr     UartTx
-00E503  A601              :                 lda a   1,x
-00E505  BDE562            :                 jsr     UartTx
-00E508  A602              :                 lda a   2,x
-00E50A  BDE562            :                 jsr     UartTx
-00E50D  8DD8              :                 bsr     Space           ; Another space
-00E50F  8620              :                 lda a   #' '
-00E511  F6A00B            :                 lda b   MODE            ; Display accumulator (if any)
-00E514  C540              :                 bit b   #AM_A
-00E516  2702              :                 beq     .SkipA
-00E518  8641              :                 lda a   #'A'
-00E51A  C580              : .SkipA          bit b   #AM_B
-00E51C  2702              :                 beq     .SkipB
-00E51E  8642              :                 lda a   #'B'
-00E520  BDE562            : .SkipB          jsr     UartTx
+00E4EF  C6FF              :                 lda b   #>MNEMONICS     ; Work out mnemonic address
+00E4F1  8600              :                 lda a   #<MNEMONICS
+00E4F3  BBA00A            :                 add a   OPCODE
+00E4F6  F7A00C            :                 sta b   TEMP+0          ; And transfer to X
+00E4F9  B7A00D            :                 sta a   TEMP+1
+00E4FC  FEA00C            :                 ldx     TEMP
+00E4FF  8DE9              :                 bsr     Space           ; Output initial space
+00E501  A600              :                 lda a   0,x             ; Then the opcode
+00E503  BDE5C9            :                 jsr     UartTx
+00E506  A601              :                 lda a   1,x
+00E508  BDE5C9            :                 jsr     UartTx
+00E50B  A602              :                 lda a   2,x
+00E50D  BDE5C9            :                 jsr     UartTx
+00E510  8DD8              :                 bsr     Space           ; Another space
+00E512  8620              :                 lda a   #' '
+00E514  F6A00B            :                 lda b   MODE            ; Display accumulator (if any)
+00E517  C540              :                 bit b   #AM_A
+00E519  2702              :                 beq     .SkipA
+00E51B  8641              :                 lda a   #'A'
+00E51D  C580              : .SkipA          bit b   #AM_B
+00E51F  2702              :                 beq     .SkipB
+00E521  8642              :                 lda a   #'B'
+00E523  BDE5C9            : .SkipB          jsr     UartTx
                                             
                                             
                                             
-00E523  39                :                 rts
+00E526  39                :                 rts
+                                            
+                            NewLine:
+00E527  CEFFEE            :                 ldx     #CRLF
+00E52A  7EE07E            :                 jmp     OutStr
+                                            
                             
-                            
+
+Portable Motorola 6800 Assembler [17.08]
+
                             ;===============================================================================
                             ; Software Interrupt
                             ;-------------------------------------------------------------------------------
                             
-00E524  20503D04          : P_STR           .byte   " P=",EOT
-00E528  20413D04          : A_STR:          .byte   " A=",EOT
-00E52C  20423D04          : B_STR           .byte   " B=",EOT
-00E530  20583D04          : X_STR           .byte   " X=",EOT
-00E534  2053503D04        : SP_STR          .byte   " SP=",EOT
+00E52D  20503D04          : P_STR           .byte   " P=",EOT
+00E531  20413D04          : A_STR:          .byte   " A=",EOT
+00E535  20423D04          : B_STR           .byte   " B=",EOT
+00E539  20583D04          : X_STR           .byte   " X=",EOT
+00E53D  2053503D04        : SP_STR          .byte   " SP=",EOT
                             
                             ; SP => | +0 | <next slot>
                             ;       | +1 | CCR
                             ;       | +2 | ACCB
                             ;       | +3 | ACCA
                             ;       | +4 | XH
-
-Portable Motorola 6800 Assembler [17.08]
-
                             ;       | +5 | XL
                             ;       | +6 | PCH
                             ;       | +7 | PCL
                             
                             DebugHandler:
-00E539  BFA006            :                 sts     SP              ; Save users SP
-00E53C  30                :                 tsx
-00E53D  6D06              :                 tst     6,x             ; Decrement PC
-00E53F  2602              :                 bne     .Skip
-00E541  6A05              :                 dec     5,x
-00E543  6A06              : .Skip           dec     6,x
+00E542  BFA006            :                 sts     SP              ; Save users SP
+00E545  30                :                 tsx
+00E546  6D06              :                 tst     6,x             ; Decrement PC
+00E548  2602              :                 bne     .Skip
+00E54A  6A05              :                 dec     5,x
+00E54C  6A06              : .Skip           dec     6,x
                             
                             ShowRegisters:
-00E545  BDE41D            :                 jsr     ShowPC
-00E548  BDE4A2            :                 jsr     FetchOpcode
-00E54B  BDE4C1            :                 jsr     ShowBytes
-00E54E  BDE4EC            :                 jsr     ShowOpcode
-00E551  BDE45F            :                 jsr     ShowA
-00E554  BDE46C            :                 jsr     ShowB
-00E557  BDE479            :                 jsr     ShowX
-00E55A  BDE42E            :                 jsr     ShowP
-00E55D  BDE48A            :                 jsr     ShowSP
+00E54E  BDE420            :                 jsr     ShowPC
+00E551  BDE4A5            :                 jsr     FetchOpcode
+00E554  BDE4C4            :                 jsr     ShowBytes
+00E557  BDE4EF            :                 jsr     ShowOpcode
+00E55A  BDE462            :                 jsr     ShowA
+00E55D  BDE46F            :                 jsr     ShowB
+00E560  BDE47C            :                 jsr     ShowX
+00E563  BDE431            :                 jsr     ShowP
+00E566  BDE48D            :                 jsr     ShowSP
                                             
-00E560  20FE              :                 bra     $
+                            ;===============================================================================
+                            ; Command Processor
+                            ;-------------------------------------------------------------------------------
+                            
+                            NewCommand:
+00E569  7FA00E            :                 clr     CMDLEN          ; Empty the command buffer
+                            Command:
+00E56C  BDE527            :                 jsr     NewLine         ; Position the cursor
+00E56F  862E              :                 lda a   #'.'            ; And output the prompt
+00E571  BDE5C9            :                 jsr     UartTx
+00E574  BDE5C1            :                 jsr     XOn
+                                            
+00E577  CEA02F            :                 ldx     #BUFFER         ; Load buffer pointer
+00E57A  F6A00E            :                 lda b   CMDLEN          ; Any characters to display?
+00E57D  270C              :                 beq     .Loop           ; No.
+00E57F  A600              : .Display        lda a   0,x             ; Yex, show the command so far
+
+Portable Motorola 6800 Assembler [17.08]
+
+00E581  08                :                 inx
+00E582  BDE5C9            :                 jsr     UartTx
+00E585  5A                :                 dec b
+00E586  26F7              :                 bne     .Display
+00E588  F6A00E            :                 lda b   CMDLEN
+                            
+00E58B  BDE5D4            : .Loop           jsr     UartRx          ; Read a characater
+00E58E  A700              :                 sta a   0,x             ; And save a copy
+                            
+00E590  8108              :                 cmp a   #BS             ; Check for backspace
+00E592  2712              :                 beq     .Backspace
+00E594  810D              :                 cmp a   #CR             ; And enter
+00E596  2721              :                 beq     .Enter
+                                    
+                                    ; Handle invalid characters
+                                    
+00E598  BDE5C9            :                 jsr     UartTx          ; Echo the character
+00E59B  5C                :                 inc b                   ; Increase the buffer count
+00E59C  08                :                 inx                     ; .. and pointer
+00E59D  20EC              :                 bra     .Loop           ; And read the next character
+                            
+00E59F  8607              : .Bell           lda a   #BEL            ; Beep the terminal
+00E5A1  BDE5C9            :                 jsr     UartTx
+00E5A4  20E5              :                 bra     .Loop           ; And read the next character
+                                            
+00E5A6  C100              : .Backspace      cmp b   #0              ; Is the buffer empty?
+00E5A8  27F5              :                 beq     .Bell
+00E5AA  36                :                 psh a                   ; Save the BS
+00E5AB  BDE5C9            :                 jsr     UartTx          ; Erase the last character
+00E5AE  BDE4EA            :                 jsr     Space
+00E5B1  32                :                 pul a
+00E5B2  BDE5C9            :                 jsr     UartTx
+00E5B5  5A                :                 dec b                   ; Reduce the buffer count
+00E5B6  09                :                 dex                     ; .. and pointer
+00E5B7  20D2              :                 bra     .Loop           ; Then read the next character
+                                            
+                            
+                                            
+00E5B9  F7A00E            : .Enter          sta b   CMDLEN          ; Save the command length
+00E5BC  BDE5C5            :                 jsr     XOff
+                                            
+00E5BF  20A8              :         bra     NewCommand
                             
                             ;===============================================================================
                             ; I/O Routines
                             ;-------------------------------------------------------------------------------
                             
+00E5C1  8611              : XOn:            lda a   #DC1
+00E5C3  2004              :                 bra     UartTx
+                                            
+00E5C5  8613              : XOff:           lda a   #DC3
+00E5C7  2000              :                 bra     UartTx
+                            
+                            
+
+Portable Motorola 6800 Assembler [17.08]
+
                             UartTx:
-00E562  36                :                 psh a
+00E5C9  36                :                 psh a
                             .Wait           SYS_A   CMD_IFR
-00E563  8F00              +                 .byte   $8F,CMD_IFR
-00E565  8404              :                 and a   #INT_UART_TX
-00E567  27FA              :                 beq     .Wait
-00E569  32                :                 pul a
+00E5CA  8F00              +                 .byte   $8F,CMD_IFR
+00E5CC  8404              :                 and a   #INT_UART_TX
+00E5CE  27FA              :                 beq     .Wait
+00E5D0  32                :                 pul a
                                             SYS_A   CMD_TXD
-00E56A  8F04              +                 .byte   $8F,CMD_TXD
-00E56C  39                :                 rts
+00E5D1  8F04              +                 .byte   $8F,CMD_TXD
+00E5D3  39                :                 rts
                             
                             UartRx:
+00E5D4  01                :                 nop
                                             SYS_A   CMD_IFR
-00E56D  8F00              +                 .byte   $8F,CMD_IFR
-00E56F  8402              :                 and a   #INT_UART_RX
-00E571  26FA              :                 bne     UartRx
+00E5D5  8F00              +                 .byte   $8F,CMD_IFR
+00E5D7  8402              :                 and a   #INT_UART_RX
+00E5D9  27F9              :                 beq     UartRx
                                             SYS_A   CMD_RXD
-00E573  8F05              +                 .byte   $8F,CMD_RXD
-00E575  39                :                 rts
+00E5DB  8F05              +                 .byte   $8F,CMD_RXD
+00E5DD  39                :                 rts
                             
                             ;===============================================================================
                             ;-------------------------------------------------------------------------------
                             
                                             .org    $fd00
                             OPCODES:
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FD00  0000              :                 .byte   OP_ERR,     AM_INH      ; 00 -
 00FD02  8D00              :                 .byte   OP_NOP,     AM_INH      ; 01 - NOP
 00FD04  0000              :                 .byte   OP_ERR,     AM_INH      ; 02 -
@@ -542,6 +625,9 @@ Portable Motorola 6800 Assembler [17.08]
 00FD30  0000              :                 .byte   OP_ERR,     AM_INH      ; 18 -
 00FD32  6000              :                 .byte   OP_DAA,     AM_INH      ; 19 - DAA
 00FD34  0000              :                 .byte   OP_ERR,     AM_INH      ; 1a -
+
+Portable Motorola 6800 Assembler [17.08]
+
 00FD36  0300              :                 .byte   OP_ABA,     AM_INH      ; 1b - ABA
 00FD38  0000              :                 .byte   OP_ERR,     AM_INH      ; 1c -
 00FD3A  0000              :                 .byte   OP_ERR,     AM_INH      ; 1d -
@@ -568,9 +654,6 @@ Portable Motorola 6800 Assembler [17.08]
 00FD60  D200              :                 .byte   OP_TSX,     AM_INH      ; 30 - TSX
 00FD62  7200              :                 .byte   OP_INS,     AM_INH      ; 31 - INS
 00FD64  9640              :                 .byte   OP_PUL,AM_A|AM_INH      ; 32 - PUL A
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FD66  9680              :                 .byte   OP_PUL,AM_B|AM_INH      ; 33 - PUL B
 00FD68  6600              :                 .byte   OP_DES,     AM_INH      ; 34 - DES
 00FD6A  D500              :                 .byte   OP_TXS,     AM_INH      ; 35 - TXS
@@ -599,6 +682,9 @@ Portable Motorola 6800 Assembler [17.08]
 00FD96  0000              :                 .byte   OP_ERR,     AM_INH      ; 4b -
 00FD98  6F40              :                 .byte   OP_INC,AM_A|AM_INH      ; 4c - INC A
 00FD9A  CF40              :                 .byte   OP_TST,AM_A|AM_INH      ; 4d - TST A
+
+Portable Motorola 6800 Assembler [17.08]
+
 00FD9C  0000              :                 .byte   OP_ERR,     AM_INH      ; 4e -
 00FD9E  5140              :                 .byte   OP_CLR,AM_A|AM_INH      ; 4f - CLR A
                             
@@ -625,9 +711,6 @@ Portable Motorola 6800 Assembler [17.08]
 00FDC6  5A11              :                 .byte   OP_COM,     AM_IDX      ; 63 - COM idx,X
 00FDC8  8711              :                 .byte   OP_LSR,     AM_IDX      ; 64 - LSR idx,X
 00FDCA  0000              :                 .byte   OP_ERR,     AM_INH      ; 65 -
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FDCC  9C11              :                 .byte   OP_ROR,     AM_IDX      ; 66 - ROR idx,X
 00FDCE  1211              :                 .byte   OP_ASR,     AM_IDX      ; 67 - ASR idx,X
 00FDD0  0F11              :                 .byte   OP_ASL,     AM_IDX      ; 68 - ASL idx,X
@@ -656,6 +739,9 @@ Portable Motorola 6800 Assembler [17.08]
 00FDFC  7812              :                 .byte   OP_JMP,     AM_EXT      ; 7e - JMP ext
 00FDFE  5112              :                 .byte   OP_CLR,     AM_EXT      ; 7f - CLR ext
                             
+
+Portable Motorola 6800 Assembler [17.08]
+
 00FE00  BD71              :                 .byte   OP_SUB,AM_A|AM_IMB      ; 80 - SUB A #imm
 00FE02  5771              :                 .byte   OP_CMP,AM_A|AM_IMB      ; 81 - CMP A #imm
 00FE04  A871              :                 .byte   OP_SBC,AM_A|AM_IMB      ; 82 - SBC A #imm
@@ -682,9 +768,6 @@ Portable Motorola 6800 Assembler [17.08]
 00FE2C  7E41              :                 .byte   OP_LDA,AM_A|AM_DPG      ; 96 - LDA A dir
 00FE2E  B441              :                 .byte   OP_STA,AM_A|AM_DPG      ; 97 - STA A dir
 00FE30  6C41              :                 .byte   OP_EOR,AM_A|AM_DPG      ; 98 - EOR A dir
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FE32  0641              :                 .byte   OP_ADC,AM_A|AM_DPG      ; 99 - ADC A dir
 00FE34  9041              :                 .byte   OP_ORA,AM_A|AM_DPG      ; 9a - ORA A dir
 00FE36  0941              :                 .byte   OP_ADD,AM_A|AM_DPG      ; 9b - ADD A dir
@@ -713,6 +796,9 @@ Portable Motorola 6800 Assembler [17.08]
 00FE60  BD52              :                 .byte   OP_SUB,AM_A|AM_EXT      ; b0 - SUB A ext
 00FE62  5752              :                 .byte   OP_CMP,AM_A|AM_EXT      ; b1 - CMP A ext
 00FE64  A852              :                 .byte   OP_SBC,AM_A|AM_EXT      ; b2 - SBC A ext
+
+Portable Motorola 6800 Assembler [17.08]
+
 00FE66  0000              :                 .byte   OP_ERR,     AM_INH      ; b3 -
 00FE68  0C52              :                 .byte   OP_AND,AM_A|AM_EXT      ; b4 - AND A ext
 00FE6A  2452              :                 .byte   OP_BIT,AM_A|AM_EXT      ; b5 - BIT A ext
@@ -739,9 +825,6 @@ Portable Motorola 6800 Assembler [17.08]
 00FE92  06B1              :                 .byte   OP_ADC,AM_B|AM_IMB      ; c9 - ADC B #imm
 00FE94  90B1              :                 .byte   OP_ORA,AM_B|AM_IMB      ; ca - ORA B #imm
 00FE96  09B1              :                 .byte   OP_ADD,AM_B|AM_IMB      ; cb - ADD B #imm
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FE98  0000              :                 .byte   OP_ERR,     AM_INH      ; cc -
 00FE9A  0000              :                 .byte   OP_ERR,     AM_INH      ; cd -
 00FE9C  8402              :                 .byte   OP_LDX,     AM_IMW      ; ce - LDX #imm
@@ -770,6 +853,9 @@ Portable Motorola 6800 Assembler [17.08]
 00FEC6  0000              :                 .byte   OP_ERR,     AM_INH      ; e3 -
 00FEC8  0C91              :                 .byte   OP_AND,AM_B|AM_IDX      ; e4 - AND B idx,X
 00FECA  2491              :                 .byte   OP_BIT,AM_B|AM_IDX      ; e5 - BIT B idx,X
+
+Portable Motorola 6800 Assembler [17.08]
+
 00FECC  7E91              :                 .byte   OP_LDA,AM_B|AM_IDX      ; e6 - LDA B idx,X
 00FECE  B491              :                 .byte   OP_STA,AM_B|AM_IDX      ; e7 - STA B idx,X
 00FED0  6C91              :                 .byte   OP_EOR,AM_B|AM_IDX      ; e8 - EOR B idx,X
@@ -796,9 +882,6 @@ Portable Motorola 6800 Assembler [17.08]
 00FEF8  0000              :                 .byte   OP_ERR,     AM_INH      ; fc -
 00FEFA  0000              :                 .byte   OP_ERR,     AM_INH      ; fd -
 00FEFC  8412              :                 .byte   OP_LDX,     AM_EXT      ; fe - LDX ext
-
-Portable Motorola 6800 Assembler [17.08]
-
 00FEFE  BA12              :                 .byte   OP_STX,     AM_EXT      ; ff - STX ext
                             
                             MNEMONICS:
@@ -822,11 +905,14 @@ Portable Motorola 6800 Assembler [17.08]
 00FFCC  5450415453545453> :                 .byte   "TPA","TST","TSX","TXS"
 00FFD8  574149535953      :                 .byte   "WAI","SYS"
                             
-00FFDE  57656576696C205B> : SPLASH:         .byte   "Weevil [17.08]"
-00FFEC  0D0A04            : CRLF:           .byte   CR,LF,EOT
+00FFDE  57656576696C205B> : SPLASH:         .byte   "Weevil [17.08]",CR,LF
+00FFEE  0D0A04            : CRLF:           .byte   CR,LF,EOT
                             
                             ;===============================================================================
                             ; Vectors
+
+Portable Motorola 6800 Assembler [17.08]
+
                             ;-------------------------------------------------------------------------------
                             
                                             .org    $fff8
@@ -852,150 +938,170 @@ AM_IMB                           00000031  | INT_100HZ                        00
 AM_IMW                           00000002  | AM_IMW                           00000002 
 AM_INH                           00000000  | CMD_IER                          00000002 
 AM_REL                           00000021  | INT_UART_RX                      00000002 
-A_STR                            0000E528  | CMD_IEW                          00000003 
-B_STR                            0000E52C  | OP_ABA                           00000003 
-CMD_CLR                          00000006  | CMD_TXD                          00000004 
-CMD_IER                          00000002  | EOT                              00000004 
-CMD_IEW                          00000003  | INT_UART_TX                      00000004 
-CMD_IFR                          00000000  | CMD_RXD                          00000005 
-CMD_IFW                          00000001  | CMD_CLR                          00000006 
-CMD_RXD                          00000005  | OP_ADC                           00000006 
-CMD_TXD                          00000004  | OP_ADD                           00000009 
-CR                               0000000D  | LF                               0000000A 
-CRLF                             0000FFEC  | OP_AND                           0000000C 
-DebugHandler                     0000E539  | CR                               0000000D 
-DebugHandler.Skip                0000E543  | OP_ASL                           0000000F 
-DummyHandler                     0000E41C  | AM_IDX                           00000011 
-EOT                              00000004  | AM_EXT                           00000012 
-FetchOpcode                      0000E4A2  | OP_ASR                           00000012 
-FetchOpcode.Skip                 0000E4AD  | OP_BCC                           00000015 
-INT_100HZ                        00000001  | OP_BCS                           00000018 
-INT_UART_RX                      00000002  | OP_BEQ                           0000001B 
-INT_UART_TX                      00000004  | OP_BGE                           0000001E 
-IRQ                              0000E000  | AM_REL                           00000021 
-IRQV                             0000A000  | OP_BGT                           00000021 
-InChar                           0000E078  | OP_BIT                           00000024 
-LF                               0000000A  | OP_BHI                           00000027 
-MNEMONICS                        0000FF00  | OP_BLE                           0000002A 
-MODE                             0000A00B  | OP_BLS                           0000002D 
-MPTR                             0000A008  | OP_BLT                           00000030 
-NMI                              0000E005  | AM_IMB                           00000031 
-NMIV                             0000A002  | OP_BMI                           00000033 
-OPCODE                           0000A00A  | OP_BNE                           00000036 
-OPCODES                          0000FD00  | OP_BPL                           00000039 
-OP_ABA                           00000003  | OP_BRA                           0000003C 
-OP_ADC                           00000006  | OP_BSR                           0000003F 
-OP_ADD                           00000009  | AM_A                             00000040 
-OP_AND                           0000000C  | OP_BVC                           00000042 
-OP_ASL                           0000000F  | OP_BVS                           00000045 
-OP_ASR                           00000012  | OP_CBA                           00000048 
-OP_BCC                           00000015  | OP_CLC                           0000004B 
-OP_BCS                           00000018  | OP_CLI                           0000004E 
-OP_BEQ                           0000001B  | OP_CLR                           00000051 
-OP_BGE                           0000001E  | OP_CLV                           00000054 
-OP_BGT                           00000021  | OP_CMP                           00000057 
-OP_BHI                           00000027  | OP_COM                           0000005A 
+A_STR                            0000E531  | CMD_IEW                          00000003 
+BEL                              00000007  | OP_ABA                           00000003 
+BS                               00000008  | CMD_TXD                          00000004 
+BUFFER                           0000A02F  | EOT                              00000004 
+B_STR                            0000E535  | INT_UART_TX                      00000004 
+CMDLEN                           0000A00E  | CMD_RXD                          00000005 
+CMD_CLR                          00000006  | CMD_CLR                          00000006 
+CMD_IER                          00000002  | OP_ADC                           00000006 
+CMD_IEW                          00000003  | BEL                              00000007 
+CMD_IFR                          00000000  | BS                               00000008 
+CMD_IFW                          00000001  | OP_ADD                           00000009 
+CMD_RXD                          00000005  | LF                               0000000A 
+CMD_TXD                          00000004  | OP_AND                           0000000C 
+CR                               0000000D  | CR                               0000000D 
+CRLF                             0000FFEE  | OP_ASL                           0000000F 
+Command                          0000E56C  | AM_IDX                           00000011 
+Command.Backspace                0000E5A6  | DC1                              00000011 
+Command.Bell                     0000E59F  | AM_EXT                           00000012 
+Command.Display                  0000E57F  | OP_ASR                           00000012 
+Command.Enter                    0000E5B9  | DC3                              00000013 
+Command.Loop                     0000E58B  | OP_BCC                           00000015 
+DC1                              00000011  | OP_BCS                           00000018 
+DC3                              00000013  | OP_BEQ                           0000001B 
+DEL                              0000007F  | OP_BGE                           0000001E 
+DebugHandler                     0000E542  | AM_REL                           00000021 
+DebugHandler.Skip                0000E54C  | OP_BGT                           00000021 
+DummyHandler                     0000E41F  | OP_BIT                           00000024 
+EOT                              00000004  | OP_BHI                           00000027 
+FetchOpcode                      0000E4A5  | OP_BLE                           0000002A 
+FetchOpcode.Skip                 0000E4B0  | OP_BLS                           0000002D 
+INT_100HZ                        00000001  | OP_BLT                           00000030 
+INT_UART_RX                      00000002  | AM_IMB                           00000031 
+INT_UART_TX                      00000004  | OP_BMI                           00000033 
+IRQ                              0000E000  | OP_BNE                           00000036 
+IRQV                             0000A000  | OP_BPL                           00000039 
+InChar                           0000E078  | OP_BRA                           0000003C 
+LF                               0000000A  | OP_BSR                           0000003F 
+MNEMONICS                        0000FF00  | AM_A                             00000040 
+MODE                             0000A00B  | OP_BVC                           00000042 
+MPTR                             0000A008  | OP_BVS                           00000045 
+NMI                              0000E005  | OP_CBA                           00000048 
+NMIV                             0000A002  | OP_CLC                           0000004B 
+NewCommand                       0000E569  | OP_CLI                           0000004E 
 
 Portable Motorola 6800 Assembler [17.08]
 
-OP_BIT                           00000024  | OP_CPX                           0000005D 
-OP_BLE                           0000002A  | OP_DAA                           00000060 
-OP_BLS                           0000002D  | OP_DEC                           00000063 
-OP_BLT                           00000030  | OP_DES                           00000066 
-OP_BMI                           00000033  | OP_DEX                           00000069 
-OP_BNE                           00000036  | OP_EOR                           0000006C 
-OP_BPL                           00000039  | OP_INC                           0000006F 
-OP_BRA                           0000003C  | OP_INS                           00000072 
-OP_BSR                           0000003F  | OP_INX                           00000075 
-OP_BVC                           00000042  | OP_JMP                           00000078 
-OP_BVS                           00000045  | OP_JSR                           0000007B 
-OP_CBA                           00000048  | OP_LDA                           0000007E 
-OP_CLC                           0000004B  | AM_B                             00000080 
-OP_CLI                           0000004E  | OP_LDS                           00000081 
-OP_CLR                           00000051  | OP_LDX                           00000084 
-OP_CLV                           00000054  | OP_LSR                           00000087 
-OP_CMP                           00000057  | OP_NEG                           0000008A 
-OP_COM                           0000005A  | OP_NOP                           0000008D 
-OP_CPX                           0000005D  | OP_ORA                           00000090 
-OP_DAA                           00000060  | OP_PSH                           00000093 
-OP_DEC                           00000063  | OP_PUL                           00000096 
-OP_DES                           00000066  | OP_ROL                           00000099 
-OP_DEX                           00000069  | OP_ROR                           0000009C 
-OP_EOR                           0000006C  | OP_RTI                           0000009F 
-OP_ERR                           00000000  | OP_RTS                           000000A2 
-OP_INC                           0000006F  | OP_SBA                           000000A5 
-OP_INS                           00000072  | OP_SBC                           000000A8 
-OP_INX                           00000075  | OP_SEC                           000000AB 
-OP_JMP                           00000078  | OP_SEI                           000000AE 
-OP_JSR                           0000007B  | OP_SEV                           000000B1 
-OP_LDA                           0000007E  | OP_STA                           000000B4 
-OP_LDS                           00000081  | OP_STS                           000000B7 
-OP_LDX                           00000084  | OP_STX                           000000BA 
-OP_LSR                           00000087  | OP_SUB                           000000BD 
-OP_NEG                           0000008A  | OP_SWI                           000000C0 
-OP_NOP                           0000008D  | OP_TAB                           000000C3 
-OP_ORA                           00000090  | OP_TAP                           000000C6 
-OP_PSH                           00000093  | OP_TBA                           000000C9 
-OP_PUL                           00000096  | OP_TPA                           000000CC 
-OP_ROL                           00000099  | OP_TST                           000000CF 
-OP_ROR                           0000009C  | OP_TSX                           000000D2 
-OP_RTI                           0000009F  | OP_TXS                           000000D5 
-OP_RTS                           000000A2  | OP_WAI                           000000D8 
-OP_SBA                           000000A5  | OP_SYS                           000000DB 
-OP_SBC                           000000A8  | IRQV                             0000A000 
-OP_SEC                           000000AB  | NMIV                             0000A002 
-OP_SEI                           000000AE  | SWIV                             0000A004 
-OP_SEV                           000000B1  | SP                               0000A006 
-OP_STA                           000000B4  | MPTR                             0000A008 
-OP_STS                           000000B7  | OPCODE                           0000A00A 
-OP_STX                           000000BA  | MODE                             0000A00B 
-OP_SUB                           000000BD  | TEMP                             0000A00C 
-OP_SWI                           000000C0  | STACK                            0000A02E 
-OP_SYS                           000000DB  | IRQ                              0000E000 
+NewLine                          0000E527  | OP_CLR                           00000051 
+OPCODE                           0000A00A  | OP_CLV                           00000054 
+OPCODES                          0000FD00  | OP_CMP                           00000057 
+OP_ABA                           00000003  | OP_COM                           0000005A 
+OP_ADC                           00000006  | OP_CPX                           0000005D 
+OP_ADD                           00000009  | OP_DAA                           00000060 
+OP_AND                           0000000C  | OP_DEC                           00000063 
+OP_ASL                           0000000F  | OP_DES                           00000066 
+OP_ASR                           00000012  | OP_DEX                           00000069 
+OP_BCC                           00000015  | OP_EOR                           0000006C 
+OP_BCS                           00000018  | OP_INC                           0000006F 
+OP_BEQ                           0000001B  | OP_INS                           00000072 
+OP_BGE                           0000001E  | OP_INX                           00000075 
+OP_BGT                           00000021  | OP_JMP                           00000078 
+OP_BHI                           00000027  | OP_JSR                           0000007B 
+OP_BIT                           00000024  | OP_LDA                           0000007E 
+OP_BLE                           0000002A  | DEL                              0000007F 
+OP_BLS                           0000002D  | AM_B                             00000080 
+OP_BLT                           00000030  | OP_LDS                           00000081 
+OP_BMI                           00000033  | OP_LDX                           00000084 
+OP_BNE                           00000036  | OP_LSR                           00000087 
+OP_BPL                           00000039  | OP_NEG                           0000008A 
+OP_BRA                           0000003C  | OP_NOP                           0000008D 
+OP_BSR                           0000003F  | OP_ORA                           00000090 
+OP_BVC                           00000042  | OP_PSH                           00000093 
+OP_BVS                           00000045  | OP_PUL                           00000096 
+OP_CBA                           00000048  | OP_ROL                           00000099 
+OP_CLC                           0000004B  | OP_ROR                           0000009C 
+OP_CLI                           0000004E  | OP_RTI                           0000009F 
+OP_CLR                           00000051  | OP_RTS                           000000A2 
+OP_CLV                           00000054  | OP_SBA                           000000A5 
+OP_CMP                           00000057  | OP_SBC                           000000A8 
+OP_COM                           0000005A  | OP_SEC                           000000AB 
+OP_CPX                           0000005D  | OP_SEI                           000000AE 
+OP_DAA                           00000060  | OP_SEV                           000000B1 
+OP_DEC                           00000063  | OP_STA                           000000B4 
+OP_DES                           00000066  | OP_STS                           000000B7 
+OP_DEX                           00000069  | OP_STX                           000000BA 
+OP_EOR                           0000006C  | OP_SUB                           000000BD 
+OP_ERR                           00000000  | OP_SWI                           000000C0 
+OP_INC                           0000006F  | OP_TAB                           000000C3 
+OP_INS                           00000072  | OP_TAP                           000000C6 
+OP_INX                           00000075  | OP_TBA                           000000C9 
+OP_JMP                           00000078  | OP_TPA                           000000CC 
+OP_JSR                           0000007B  | OP_TST                           000000CF 
+OP_LDA                           0000007E  | OP_TSX                           000000D2 
+OP_LDS                           00000081  | OP_TXS                           000000D5 
+OP_LDX                           00000084  | OP_WAI                           000000D8 
+OP_LSR                           00000087  | OP_SYS                           000000DB 
+OP_NEG                           0000008A  | IRQV                             0000A000 
+OP_NOP                           0000008D  | NMIV                             0000A002 
+OP_ORA                           00000090  | SWIV                             0000A004 
+OP_PSH                           00000093  | SP                               0000A006 
+OP_PUL                           00000096  | MPTR                             0000A008 
 
 Portable Motorola 6800 Assembler [17.08]
 
-OP_TAB                           000000C3  | NMI                              0000E005 
-OP_TAP                           000000C6  | SWI                              0000E00A 
-OP_TBA                           000000C9  | OutHexHi                         0000E067 
-OP_TPA                           000000CC  | OutHexLo                         0000E06B 
-OP_TST                           000000CF  | OutChar                          0000E075 
-OP_TSX                           000000D2  | InChar                           0000E078 
-OP_TXS                           000000D5  | OutStrLoop                       0000E07B 
-OP_WAI                           000000D8  | OutStr                           0000E07E 
-OutChar                          0000E075  | RESET                            0000E400 
-OutHex2                          0000E49A  | RESET.Loop                       0000E419 
-OutHexHi                         0000E067  | DummyHandler                     0000E41C 
-OutHexLo                         0000E06B  | ShowPC                           0000E41D 
-OutStr                           0000E07E  | ShowP                            0000E42E 
-OutStrLoop                       0000E07B  | ShowBit                          0000E457 
-P_STR                            0000E524  | ShowBit.Skip                     0000E45C 
-RESET                            0000E400  | ShowA                            0000E45F 
-RESET.Loop                       0000E419  | ShowB                            0000E46C 
-SP                               0000A006  | ShowX                            0000E479 
-SPLASH                           0000FFDE  | ShowSP                           0000E48A 
-SP_STR                           0000E534  | OutHex2                          0000E49A 
-STACK                            0000A02E  | FetchOpcode                      0000E4A2 
-SWI                              0000E00A  | FetchOpcode.Skip                 0000E4AD 
-SWIV                             0000A004  | ShowBytes                        0000E4C1 
-ShowA                            0000E45F  | ShowBytes.Blank2                 0000E4E1 
-ShowB                            0000E46C  | ShowBytes.Blank1                 0000E4E3 
-ShowBit                          0000E457  | Space                            0000E4E7 
-ShowBit.Skip                     0000E45C  | ShowOpcode                       0000E4EC 
-ShowBytes                        0000E4C1  | ShowOpcode.SkipA                 0000E51A 
-ShowBytes.Blank1                 0000E4E3  | ShowOpcode.SkipB                 0000E520 
-ShowBytes.Blank2                 0000E4E1  | P_STR                            0000E524 
-ShowOpcode                       0000E4EC  | A_STR                            0000E528 
-ShowOpcode.SkipA                 0000E51A  | B_STR                            0000E52C 
-ShowOpcode.SkipB                 0000E520  | X_STR                            0000E530 
-ShowP                            0000E42E  | SP_STR                           0000E534 
-ShowPC                           0000E41D  | DebugHandler                     0000E539 
-ShowRegisters                    0000E545  | DebugHandler.Skip                0000E543 
-ShowSP                           0000E48A  | ShowRegisters                    0000E545 
-ShowX                            0000E479  | UartTx                           0000E562 
-Space                            0000E4E7  | UartTx.Wait                      0000E563 
-TEMP                             0000A00C  | UartRx                           0000E56D 
-UartRx                           0000E56D  | OPCODES                          0000FD00 
-UartTx                           0000E562  | MNEMONICS                        0000FF00 
-UartTx.Wait                      0000E563  | SPLASH                           0000FFDE 
-X_STR                            0000E530  | CRLF                             0000FFEC 
+OP_ROL                           00000099  | OPCODE                           0000A00A 
+OP_ROR                           0000009C  | MODE                             0000A00B 
+OP_RTI                           0000009F  | TEMP                             0000A00C 
+OP_RTS                           000000A2  | CMDLEN                           0000A00E 
+OP_SBA                           000000A5  | BUFFER                           0000A02F 
+OP_SBC                           000000A8  | STACK                            0000A02F 
+OP_SEC                           000000AB  | IRQ                              0000E000 
+OP_SEI                           000000AE  | NMI                              0000E005 
+OP_SEV                           000000B1  | SWI                              0000E00A 
+OP_STA                           000000B4  | OutHexHi                         0000E067 
+OP_STS                           000000B7  | OutHexLo                         0000E06B 
+OP_STX                           000000BA  | OutChar                          0000E075 
+OP_SUB                           000000BD  | InChar                           0000E078 
+OP_SWI                           000000C0  | OutStrLoop                       0000E07B 
+OP_SYS                           000000DB  | OutStr                           0000E07E 
+OP_TAB                           000000C3  | RESET                            0000E400 
+OP_TAP                           000000C6  | RESET.Loop                       0000E41C 
+OP_TBA                           000000C9  | DummyHandler                     0000E41F 
+OP_TPA                           000000CC  | ShowPC                           0000E420 
+OP_TST                           000000CF  | ShowP                            0000E431 
+OP_TSX                           000000D2  | ShowBit                          0000E45A 
+OP_TXS                           000000D5  | ShowBit.Skip                     0000E45F 
+OP_WAI                           000000D8  | ShowA                            0000E462 
+OutChar                          0000E075  | ShowB                            0000E46F 
+OutHex2                          0000E49D  | ShowX                            0000E47C 
+OutHexHi                         0000E067  | ShowSP                           0000E48D 
+OutHexLo                         0000E06B  | OutHex2                          0000E49D 
+OutStr                           0000E07E  | FetchOpcode                      0000E4A5 
+OutStrLoop                       0000E07B  | FetchOpcode.Skip                 0000E4B0 
+P_STR                            0000E52D  | ShowBytes                        0000E4C4 
+RESET                            0000E400  | ShowBytes.Blank2                 0000E4E4 
+RESET.Loop                       0000E41C  | ShowBytes.Blank1                 0000E4E6 
+SP                               0000A006  | Space                            0000E4EA 
+SPLASH                           0000FFDE  | ShowOpcode                       0000E4EF 
+SP_STR                           0000E53D  | ShowOpcode.SkipA                 0000E51D 
+STACK                            0000A02F  | ShowOpcode.SkipB                 0000E523 
+SWI                              0000E00A  | NewLine                          0000E527 
+SWIV                             0000A004  | P_STR                            0000E52D 
+ShowA                            0000E462  | A_STR                            0000E531 
+ShowB                            0000E46F  | B_STR                            0000E535 
+ShowBit                          0000E45A  | X_STR                            0000E539 
+ShowBit.Skip                     0000E45F  | SP_STR                           0000E53D 
+ShowBytes                        0000E4C4  | DebugHandler                     0000E542 
+ShowBytes.Blank1                 0000E4E6  | DebugHandler.Skip                0000E54C 
+ShowBytes.Blank2                 0000E4E4  | ShowRegisters                    0000E54E 
+ShowOpcode                       0000E4EF  | NewCommand                       0000E569 
+ShowOpcode.SkipA                 0000E51D  | Command                          0000E56C 
+ShowOpcode.SkipB                 0000E523  | Command.Display                  0000E57F 
+ShowP                            0000E431  | Command.Loop                     0000E58B 
+ShowPC                           0000E420  | Command.Bell                     0000E59F 
+ShowRegisters                    0000E54E  | Command.Backspace                0000E5A6 
+ShowSP                           0000E48D  | Command.Enter                    0000E5B9 
+ShowX                            0000E47C  | XOn                              0000E5C1 
+Space                            0000E4EA  | XOff                             0000E5C5 
+
+Portable Motorola 6800 Assembler [17.08]
+
+TEMP                             0000A00C  | UartTx                           0000E5C9 
+UartRx                           0000E5D4  | UartTx.Wait                      0000E5CA 
+UartTx                           0000E5C9  | UartRx                           0000E5D4 
+UartTx.Wait                      0000E5CA  | OPCODES                          0000FD00 
+XOff                             0000E5C5  | MNEMONICS                        0000FF00 
+XOn                              0000E5C1  | SPLASH                           0000FFDE 
+X_STR                            0000E539  | CRLF                             0000FFEE 

@@ -3,7 +3,10 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
+            <file>file:/D:/OpenSource/MPLABX/em-retro/em-6800.inc</file>
             <file>file:/D:/OpenSource/MPLABX/em-retro/em-6502.s</file>
+            <file>file:/D:/OpenSource/MPLABX/em-retro/firmware.s</file>
+            <file>file:/D:/OpenSource/MPLABX/em-retro/disassembly/listing.disasm</file>
             <file>file:/D:/OpenSource/MPLABX/em-retro/em-6800.s</file>
         </group>
     </open-files>

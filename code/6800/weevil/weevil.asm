@@ -40,8 +40,13 @@
 ; ASCII Control Codes
 
 EOT		.equ	$04
+BEL		.equ	$07
+BS		.equ	$08
 LF		.equ	$0a
 CR		.equ	$0d
+DC1		.equ	$11
+DC3		.equ	$13
+DEL		.equ	$7f
 
 ; Opcode Indexes
 
@@ -147,9 +152,14 @@ MPTR:		.space	2
 OPCODE:		.space	1
 MODE:		.space	1
 TEMP:		.space	2
+CMDLEN:		.space	1
+
 
 		.space	32
 STACK:
+
+BUFFER:		.space 	128
+
 
 ;===============================================================================
 ; Interrupt Handlers
@@ -216,6 +226,7 @@ RESET:
 		ldx	#DebugHandler
 		stx	SWIV
 
+		jsr	NewLine
 		ldx	#SPLASH
 		jsr	OutStr
 
@@ -381,7 +392,11 @@ ShowOpcode:
 		
 		
 		rts
-
+		
+NewLine:
+		ldx	#CRLF
+		jmp	OutStr
+		
 
 ;===============================================================================
 ; Software Interrupt
@@ -421,11 +436,75 @@ ShowRegisters:
 		jsr	ShowP
 		jsr	ShowSP
 		
-		bra	$
+;===============================================================================
+; Command Processor
+;-------------------------------------------------------------------------------
+
+NewCommand:
+		clr	CMDLEN		; Empty the command buffer
+Command:
+		jsr	NewLine		; Position the cursor
+		lda a	#'.'		; And output the prompt
+		jsr	UartTx
+		jsr	XOn
+		
+		ldx	#BUFFER		; Load buffer pointer
+		lda b	CMDLEN		; Any characters to display?
+		beq	.Loop		; No.
+.Display	lda a	0,x		; Yex, show the command so far
+		inx
+		jsr	UartTx
+		dec b
+		bne	.Display
+		lda b	CMDLEN
+
+.Loop		jsr	UartRx		; Read a characater
+		sta a	0,x		; And save a copy
+
+		cmp a	#BS		; Check for backspace
+		beq	.Backspace
+		cmp a	#CR		; And enter
+		beq	.Enter
+	
+	; Handle invalid characters
+	
+		jsr	UartTx		; Echo the character
+		inc b			; Increase the buffer count
+		inx			; .. and pointer
+		bra	.Loop		; And read the next character
+
+.Bell		lda a 	#BEL		; Beep the terminal
+		jsr	UartTx
+		bra	.Loop		; And read the next character
+		
+.Backspace	cmp b	#0		; Is the buffer empty?
+		beq	.Bell
+		psh a			; Save the BS
+		jsr	UartTx		; Erase the last character
+		jsr	Space
+		pul a
+		jsr	UartTx
+		dec b			; Reduce the buffer count
+		dex			; .. and pointer
+		bra	.Loop		; Then read the next character
+		
+
+		
+.Enter		sta b	CMDLEN		; Save the command length
+		jsr	XOff
+		
+	bra	NewCommand
 
 ;===============================================================================
 ; I/O Routines
 ;-------------------------------------------------------------------------------
+
+XOn:		lda a	#DC1
+		bra	UartTx
+		
+XOff:		lda a	#DC3
+		bra	UartTx
+
 
 UartTx:
 		psh a
@@ -437,9 +516,10 @@ UartTx:
 		rts
 
 UartRx:
+		nop
 		SYS_A	CMD_IFR
 		and a	#INT_UART_RX
-		bne	UartRx
+		beq	UartRx
 		SYS_A	CMD_RXD
 		rts
 
@@ -741,7 +821,7 @@ MNEMONICS:
 		.byte	"TPA","TST","TSX","TXS"
 		.byte	"WAI","SYS"
 
-SPLASH:		.byte	"Weevil [17.08]"
+SPLASH:		.byte	"Weevil [17.08]",CR,LF
 CRLF:		.byte	CR,LF,EOT
 
 ;===============================================================================
