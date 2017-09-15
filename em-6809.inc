@@ -7,7 +7,7 @@
 ;
 ; A Motorola 6809 Emulator
 ;-------------------------------------------------------------------------------
-; Copyright (C)2014-2016 HandCoded Software Ltd.
+; Copyright (C)2014-2017 HandCoded Software Ltd.
 ; All rights reserved.
 ;
 ; This work is made available under the terms of the Creative Commons
@@ -152,35 +152,20 @@
 
         .macro  OP_ABX
         ze      R_D,w0                  ; Extract unsigned B value
-        add     R_X,w0,R_X              ; And add to X
+        add     w0,R_X,R_X              ; And add to X
         .endm
 
-        .macro  OP_ADCA
+        .macro  OP_ADC,ACC
         RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_A,w0                 ; Load a pointer to A
+        mov     #\ACC,w0                ; Load a pointer to ACC
         mov     R_SR,SR                 ; Restore the carry flag
         addc.b  w3,[w0],[w0]            ; Perform the addition
         mov     SR,R_SR                 ; And save the revised flags
         .endm
 
-        .macro  OP_ADCB
+        .macro  OP_ADD,ACC
         RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_B,w0                 ; Load a pointer to A
-        mov     R_SR,SR                 ; Restore the carry flag
-        addc.b  w3,[w0],[w0]            ; Perform the addition
-        mov     SR,R_SR                 ; And save the revised flags
-        .endm
-
-        .macro  OP_ADDA
-        RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_A,w0                 ; Load a pointer to A
-        add.b   w3,[w0],[w0]            ; Perform the addition
-        mov     SR,R_SR                 ; And save the revised flags
-        .endm
-
-        .macro  OP_ADDB
-        RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_B,w0                 ; Load a pointer to B
+        mov     #\ACC,w0                ; Load a pointer to ACC
         add.b   w3,[w0],[w0]            ; Perform the addition
         mov     SR,R_SR                 ; And save the revised flags
         .endm
@@ -198,26 +183,13 @@
         xor     w0,R_SR,R_SR
         .endm
 
-        .macro  OP_ANDA
+        .macro  OP_AND,ACC
         RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_A,w0                 ; Load a pointer to A
+        mov     #\ACC,w0                ; Load a pointer to ACC
+	mov	R_SR,SR			; Restore the flags
         and.b   w3,[w0],[w0]            ; Perform the AND
-        mov     SR,w0                   ; And save N,Z flags
-        xor     w0,R_SR,w0
-        and     #(1<<N)|(1<<Z),w0
-        xor     w0,R_SR,R_SR
-        bclr    R_SR,#OV                ; And always clear V
-        .endm
-
-        .macro  OP_ANDB
-        RD_ADDR w2,ze,w3                ; Fetch the data byte
-        mov     #M_B,w0                 ; Load a pointer to B
-        and.b   w3,[w0],[w0]            ; Perform the AND
-        mov     SR,w0                   ; And save N,Z flags
-        xor     w0,R_SR,w0
-        and     #(1<<N)|(1<<Z),w0
-        xor     w0,R_SR,R_SR
-        bclr    R_SR,#OV                ; And always clear V
+        bclr    SR,#OV                  ; And always clear V
+        mov     SR,R_SR                 ; And save N,Z flags
         .endm
 
         .macro  OP_ANDCC
@@ -227,43 +199,29 @@
         _SETP
         .endm
 
-        .macro  OP_ASLA
-        mov     #M_A,w0                 ; Load pointer to A
-        mov.b   [w0],w1
-        add.b   w1,[w0],[w0]            ; Perform ASL
+        .macro  OP_ASL,ACC
+        mov     #\ACC,w0                ; Load pointer to ACC
+        sl.b	[w0],[w0]		; Perform ASL
         mov     SR,R_SR                 ; And save N,Z,V,C
         .endm
 
-        .macro  OP_ASLB
-        mov     #M_B,w0                 ; Load pointer to B
-        mov.b   [w0],w1
-        add.b   w1,[w0],[w0]            ; Perform ASL
-        mov     SR,R_SR                 ; And save N,Z,V,C
-        .endm
-
-        .macro  OP_ASL
+        .macro  OP_ASL_M
         RD_ADDR w2,ze,w3                ; Fetch the data byte
-        add.b   w3,w3,w3                ; Perform ASL
+        sl.b	w3,w3			; Perform ASL
         mov     SR,R_SR
         WR_ADDR w2,w3                   ; And write back result
         .endm
 
-        .macro  OP_ASRA
-        mov     #M_A,w0                 ; Load pointer to A
+        .macro  OP_ASR,ACC
+        mov     #\ACC,w0                ; Load pointer to ACC
         asr.b   [w0],[w0]               ; Perform ASR
         mov     SR,R_SR                 ; And save N,Z,V,C
          .endm
 
-        .macro  OP_ASRB
-        mov     #M_B,w0                 ; Load pointer to B
-        sl.b    [w0],[w0]               ; Perform ASR
-        mov     SR,R_SR                 ; And save N,Z,V,C
-        .endm
-
-        .macro  OP_ASR
+        .macro  OP_ASR_M
         RD_ADDR w2,ze,w3                ; Fetch the data byte
         asr.b   w3,w3                   ; Perform ASR
-        mov     SR,R_SR
+        mov     SR,R_SR			; And save N,Z,V,C
         WR_ADDR w2,w3                   ; And write back result
         .endm
 
@@ -289,16 +247,10 @@
         .macro  OP_BHI
         .endm
 
-        .macro  OP_BHS
-        .endm
-
-        .macro  OP_BIT
+        .macro  OP_BIT,ACC
         .endm
 
         .macro  OP_BLE
-        .endm
-
-        .macro  OP_BLO
         .endm
 
         .macro  OP_BLS
@@ -331,19 +283,32 @@
         .macro  OP_BVS
         .endm
 
-        .macro  OP_CLR
+        .macro  OP_CLR,ACC
+	mov	#\ACC,w0
+	clr.b	[w0]
         .endm
 
-        .macro  OP_CMP
+        .macro  OP_CLR_M
+	mov	#0,w3
+	WR_ADDR	w2,w3
         .endm
 
-        .macro  OP_CMP_W
+        .macro  OP_CMP,ACC
+        .endm
+
+        .macro  OP_CMP_W,REG
+	
         .endm
 
         .macro  OP_COM,ACC
+	mov	#\ACC,w0
+	com.b	[w0],[w0]
         .endm
 
-        .macro  OP_COMM
+        .macro  OP_COM_M
+	RD_ADDR	w2,ze,w3
+	com	w3,w3
+	WR_ADDR	w2,w3
         .endm
 
         .macro  OP_CWAI
@@ -353,82 +318,104 @@
         .endm
 
         .macro  OP_DEC,ACC
+	mov	#\ACC,w0
+	dec.b	[w0],[w0]
         .endm
 
         .macro  OP_DEC_M
+	RD_ADDR	w2,ze,w3
+	dec.b	w3,w3
+	WR_ADDR	w2,w3
         .endm
 
         .macro  OP_EOR,ACC
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        mov     #\ACC,w0                ; Load a pointer to ACC
+	mov	R_SR,SR			; Restore the flags
+        xor.b   w3,[w0],[w0]            ; Perform the XOR
+        bclr    SR,#OV                  ; And always clear V
+        mov     SR,R_SR                 ; And save N,Z flags
         .endm
 
         .macro  OP_EXG
         .endm
 
         .macro  OP_INC,ACC
+	mov	#\ACC,w0
+	inc.b	[w0],[w0]
         .endm
 
         .macro  OP_INC_M
+	RD_ADDR	w2,ze,w3
+	inc.b	w3,w3
+	WR_ADDR	w2,w3
         .endm
 
         .macro  OP_JMP
+	mov	w2,R_PC
         .endm
 
         .macro  OP_JSR
         .endm
 
-        .macro  OP_LBCC
-        bra     c,0f
-        mov     w2,R_PC
-        inc     CYCLE
-0:
-        .endm
-
-        .macro  OP_LBCS
-        bra     nc,0f
-        mov     w2,R_PC
-        inc     CYCLE
-0:
-       .endm
-
         .macro  OP_LDA
+	RD_ADDR	w2,ze,w3
+	mov	#M_A,w0
+	mov	R_SR,SR
+	ior.b	#0,w3
+	mov.b	w3,[w0]
+	bclr	SR,#OV
+	mov	SR,R_SR	
         .endm
 
         .macro  OP_LDB
+	RD_ADDR	w2,ze,w3
+	mov	#M_B,w0
+	mov	R_SR,SR
+	ior.b	#0,w3
+	mov.b	w3,[w0]
+	bclr	SR,#OV
+	mov	SR,R_SR	
         .endm
 
         .macro  OP_LD,REG
+	RD_ADDR	w2,ze,\REG
+	inc	w2,w2
+	RD_ADDR	w2,ze,w3
+	swap	\REG
+	mov	R_SR,SR
+	ior	w3,\REG,\REG
+	bclr	SR,#OV
+	mov	SR,R_SR
         .endm
 
-        .macro  OP_LEA
+        .macro  OP_LEA,REG
+	mov	w2,\REG
+; Set Z if X/Y
         .endm
 
-        .macro  OP_LSRA
-        mov     #M_A,w0
-        lsr.b   [w0],[w0]
-        .endm
-
-        .macro  OP_LSRB
-        mov     #M_B,w0
-        lsr.b   [w0],[w0]
+        .macro  OP_LSR,ACC
+        mov     #\ACC,w0                ; Load pointer to ACC
+        lsr.b   [w0],[w0]               ; Perform LSR
+        mov     SR,R_SR                 ; And save N,Z,V,C
         .endm
 
         .macro  OP_LSR_M
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        lsr.b   w3,w3                   ; Perform ASR
+        mov     SR,R_SR			; And save N,Z,V,C
+        WR_ADDR w2,w3                   ; And write back result
         .endm
 
         .macro  OP_MUL
         .endm
 
-        .macro  OP_NEGA
-        mov     #M_A,w0                 ; Negate the value in A
+        .macro  OP_NEG,ACC
+        mov     #\ACC,w0                ; Negate the value in ACC
         com.b   [w0],[w0]
         .endm
 
-        .macro  OP_NEGB
-        mov     #M_B,w0                 ; Negate the value in B
-        com.b   [w0],[w0]
-        .endm
-
-        .macro  OP_NEG
+        .macro  OP_NEG_M
         RD_ADDR w2,ze,w3                ; Negate the value in memory
         com     w3,w3
         WR_ADDR w2,w3                   ; And write back
@@ -436,13 +423,22 @@
 
         .macro  OP_NOP
         nop
-        nop
         .endm
 
         .macro  OP_OR,ACC
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        mov     #\ACC,w0                ; Load a pointer to ACC
+	mov	R_SR,SR			; Restore the flags
+        ior.b   w3,[w0],[w0]            ; Perform the OR
+        bclr    SR,#OV                  ; And always clear V
+        mov     SR,R_SR                 ; And save N,Z flags
         .endm
 
         .macro  OP_ORCC
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        _GETP
+        ior     w0,w3,w0                ; OR with CC
+        _SETP
         .endm
 
         .macro  OP_PSH,STK
@@ -452,15 +448,33 @@
         .endm
 
         .macro  OP_ROL,ACC
+        mov     #\ACC,w0                ; Load pointer to ACC
+	mov	R_SR,SR			; Restore flags
+        rlc.b	[w0],[w0]               ; Perform ROL
+        mov     SR,R_SR                 ; And save N,Z,V,C
         .endm
 
-        .macro  OP_ROLM
+        .macro  OP_ROL_M
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+	mov	R_SR,SR			; Restore flags
+        rlc.b   w3,w3                   ; Perform ROL
+        mov     SR,R_SR			; And save N,Z,V,C
+        WR_ADDR w2,w3                   ; And write back result
         .endm
 
         .macro  OP_ROR,ACC
+        mov     #\ACC,w0                ; Load pointer to ACC
+	mov	R_SR,SR			; Restore flags
+        rrc.b	[w0],[w0]               ; Perform ROR
+        mov     SR,R_SR                 ; And save N,Z,V,C
         .endm
 
-        .macro  OP_RORM
+        .macro  OP_ROR_M
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+	mov	R_SR,SR			; Restore flags
+        rrc.b   w3,w3                   ; Perform ROR
+        mov     SR,R_SR			; And save N,Z,V,C
+        WR_ADDR w2,w3                   ; And write back result
         .endm
 
         .macro  OP_RTI
@@ -470,6 +484,11 @@
         .endm
 
         .macro  OP_SBC,ACC
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        mov     #\ACC,w0                ; Load a pointer to ACC
+        mov     R_SR,SR                 ; Restore the carry flag
+        subbr.b w3,[w0],[w0]            ; Perform the subtraction
+        mov     SR,R_SR                 ; And save the revised flags
         .endm
 
         .macro  OP_SEX
@@ -478,23 +497,41 @@
 
         .macro  OP_STA
         mov     #M_A,w0                 ; Store the value of A
-        ze      [w0],w0
+        ze      [w0],w3
         WR_ADDR w2,w3
         .endm
 
         .macro  OP_STB
         mov     #M_B,w0                 ; Store the value of B
-        ze      [w0],w0
+        ze      [w0],w3
         WR_ADDR w2,w3
         .endm
 
         .macro  OP_ST,REG
+	sl	\REG,#8,w3			; Extract the MSB
+	WR_ADDR	w2,w3			; .. and store it
+	inc	w2,w2			; Bump target address
+	WR_ADDR	w2,\REG			; .. and write LSB
         .endm
 
-        .macro  OP_SUB
+        .macro  OP_SUB,ACC
+        RD_ADDR w2,ze,w3                ; Fetch the data byte
+        mov     #\ACC,w0                ; Load a pointer to ACC
+        subr.b  w3,[w0],[w0]            ; Perform the subtraction
+        mov     SR,R_SR                 ; And save the revised flags
         .endm
 
         .macro  OP_SUBD
+        RD_ADDR w2,ze,w3                ; Read the MSB of data word
+        inc     w2,w2
+        swap    w3
+        RD_ADDR w2,ze,w2                ; And combine with the LSB
+        ior     w3,w2,w2
+        sub     R_D,w2,R_D              ; Subtract data from D
+        mov     SR,w0                   ; And save N,Z,V,C flags
+        xor     w0,R_SR,w0
+        and     #0x000f,w0
+        xor     w0,R_SR,R_SR
         .endm
 
         .macro  OP_SWI,VEC
@@ -506,11 +543,8 @@
         .macro  OP_TFR
         .endm
 
-        .macro  OP_TSTA
+        .macro  OP_TST,ACC
         .endm
 
-        .macro  OP_TSTB
-        .endm
-
-        .macro  OP_TST
+        .macro  OP_TST_M
         .endm
