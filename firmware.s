@@ -338,8 +338,6 @@ __reset:
         rcall   PutStr
         .asciz  "\r\n Copyright (C),2014-2017 HandCoded Software Ltd.\r\n All rights reserved.\r\n\n"
         rcall   AttrNorm
-
-   goto EM_6800
    
         btsc    SW_PORT,#SW_PIN         ; Is the user switch pressed?
         bra     ReadJumpers             ; No, boot default emulation

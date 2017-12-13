@@ -461,6 +461,8 @@ Command:
 .Loop		jsr	UartRx		; Read a characater
 		sta a	0,x		; And save a copy
 
+		cmp a	#DEL		; Check for delete
+		beq	.Backspace
 		cmp a	#BS		; Check for backspace
 		beq	.Backspace
 		cmp a	#CR		; And enter
@@ -479,10 +481,10 @@ Command:
 		
 .Backspace	cmp b	#0		; Is the buffer empty?
 		beq	.Bell
-		psh a			; Save the BS
-		jsr	UartTx		; Erase the last character
+		lda a	#BS		; Erase the last character
+		jsr	UartTx		
 		jsr	Space
-		pul a
+		lda a	#BS
 		jsr	UartTx
 		dec b			; Reduce the buffer count
 		dex			; .. and pointer
