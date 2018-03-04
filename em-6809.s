@@ -236,107 +236,107 @@ Step:
         bra     DO_LDX_DIR              ; 9e - LDX dir
         bra     DO_STX_DIR              ; 9f - STX dir
 
-        bra     DO_SUBA_IDX             ; a0 -
-        bra     DO_CMPA_IDX             ; a1 -
-        bra     DO_SBCA_IDX             ; a2 -
-        bra     DO_SUBD_IDX             ; a3 -
-        bra     DO_ANDA_IDX             ; a4 -
-        bra     DO_BITA_IDX             ; a5 -
-        bra     DO_LDA_IDX              ; a6 -
-        bra     DO_STA_IDX              ; a7 -
-        bra     DO_EORA_IDX             ; a8 -
-        bra     DO_ADCA_IDX             ; a9 -
-        bra     DO_ORA_IDX              ; aa -
-        bra     DO_ADDA_IDX             ; ab -
-        bra     DO_CMPX_IDX             ; ac -
-        bra     DO_JSR_IDX              ; ad -
-        bra     DO_LDX_IDX              ; ae -
-        bra     DO_STX_IDX              ; af -
+        bra     DO_SUBA_IDX             ; a0 - SUBA idx
+        bra     DO_CMPA_IDX             ; a1 - CMPA idx
+        bra     DO_SBCA_IDX             ; a2 - SBCA idx
+        bra     DO_SUBD_IDX             ; a3 - SUBD idx
+        bra     DO_ANDA_IDX             ; a4 - ANDA idx
+        bra     DO_BITA_IDX             ; a5 - BITA idx
+        bra     DO_LDA_IDX              ; a6 - LDA idx
+        bra     DO_STA_IDX              ; a7 - STA idx
+        bra     DO_EORA_IDX             ; a8 - EORA idx
+        bra     DO_ADCA_IDX             ; a9 - ADCA idx
+        bra     DO_ORA_IDX              ; aa - ORA idx
+        bra     DO_ADDA_IDX             ; ab - ADDA idx
+        bra     DO_CMPX_IDX             ; ac - CMPX idx
+        bra     DO_JSR_IDX              ; ad - JSR idx
+        bra     DO_LDX_IDX              ; ae - LDX idx
+        bra     DO_STX_IDX              ; af - STX idx
 
-        bra     DO_SUBA_EXT             ; b0 -
-        bra     DO_CMPA_EXT             ; b1 -
-        bra     DO_SBCA_EXT             ; b2 -
-        bra     DO_SUBD_EXT             ; b3 -
-        bra     DO_ANDA_EXT             ; b4 -
-        bra     DO_BITA_EXT             ; b5 -
-        bra     DO_LDA_EXT              ; b6 -
-        bra     DO_STA_EXT              ; b7 -
-        bra     DO_EORA_EXT             ; b8 -
-        bra     DO_ADCA_EXT             ; b9 -
-        bra     DO_ORA_EXT              ; ba -
-        bra     DO_ADDA_EXT             ; bb -
-        bra     DO_CMPX_EXT             ; bc -
-        bra     DO_JSR_EXT              ; bd -
-        bra     DO_LDX_EXT              ; be -
-        bra     DO_STX_EXT              ; bf -
+        bra     DO_SUBA_EXT             ; b0 - SUBA ext
+        bra     DO_CMPA_EXT             ; b1 - CMPA ext
+        bra     DO_SBCA_EXT             ; b2 - SBCA ext
+        bra     DO_SUBD_EXT             ; b3 - SUBD ext
+        bra     DO_ANDA_EXT             ; b4 - ANDA ext
+        bra     DO_BITA_EXT             ; b5 - BITA ext
+        bra     DO_LDA_EXT              ; b6 - LDA ext
+        bra     DO_STA_EXT              ; b7 - STA ext
+        bra     DO_EORA_EXT             ; b8 - EORA ext
+        bra     DO_ADCA_EXT             ; b9 - ADCA ext
+        bra     DO_ORA_EXT              ; ba - ORA ext
+        bra     DO_ADDA_EXT             ; bb - ADDA ext
+        bra     DO_CMPX_EXT             ; bc - CMPX ext
+        bra     DO_JSR_EXT              ; bd - JSR ext
+        bra     DO_LDX_EXT              ; be - LDX ext
+        bra     DO_STX_EXT              ; bf - STX ext
 
-        bra     DO_SUBB_IMM             ; c0 -
-        bra     DO_CMPB_IMM             ; c1 -
-        bra     DO_SBCB_IMM             ; c2 -
-        bra     DO_ADDD_IMM             ; c3 -
-        bra     DO_ANDB_IMM             ; c4 -
-        bra     DO_BITB_IMM             ; c5 -
-        bra     DO_LDB_IMM              ; c6 -
+        bra     DO_SUBB_IMM             ; c0 - SUBB imm
+        bra     DO_CMPB_IMM             ; c1 - CMPB imm
+        bra     DO_SBCB_IMM             ; c2 - SBCB imm
+        bra     DO_ADDD_IMM             ; c3 - ADDD imm
+        bra     DO_ANDB_IMM             ; c4 - ANDB imm
+        bra     DO_BITB_IMM             ; c5 - BITB imm
+        bra     DO_LDB_IMM              ; c6 - LDB imm
         bra     DO_ERR                  ; c7 -
-        bra     DO_EORB_IMM             ; c8 -
-        bra     DO_ADCB_IMM             ; c9 -
-        bra     DO_ORB_IMM              ; ca -
-        bra     DO_ADDB_IMM             ; cb -
-        bra     DO_LDD_IMM              ; cc -
+        bra     DO_EORB_IMM             ; c8 - EORB imm
+        bra     DO_ADCB_IMM             ; c9 - ADCB imm
+        bra     DO_ORB_IMM              ; ca - ORB imm
+        bra     DO_ADDB_IMM             ; cb - ADDB imm
+        bra     DO_LDD_IMM              ; cc - LDD imm
         bra     DO_ERR                  ; cd -
-        bra     DO_LDU_IMM              ; ce -
+        bra     DO_LDU_IMM              ; ce - LDU imm
         bra     DO_ERR                  ; cf -
 
-        bra     DO_SUBB_DIR             ; d0 -
-        bra     DO_CMPB_DIR             ; d1 -
-        bra     DO_SBCB_DIR             ; d2 -
-        bra     DO_ADDD_DIR             ; d3 -
-        bra     DO_ANDB_DIR             ; d4 -
-        bra     DO_BITB_DIR             ; d5 -
-        bra     DO_LDB_DIR              ; d6 -
-        bra     DO_STB_DIR              ; d7 -
-        bra     DO_EORB_DIR             ; d8 -
-        bra     DO_ADCB_DIR             ; d9 -
-        bra     DO_ORB_DIR              ; da -
-        bra     DO_ADDB_DIR             ; db -
-        bra     DO_LDD_DIR              ; dc -
-        bra     DO_STD_DIR              ; dd -
-        bra     DO_LDU_DIR              ; de -
-        bra     DO_STU_DIR              ; df -
+        bra     DO_SUBB_DIR             ; d0 - SUBB dir
+        bra     DO_CMPB_DIR             ; d1 - CMPB dir
+        bra     DO_SBCB_DIR             ; d2 - SBCD dir
+        bra     DO_ADDD_DIR             ; d3 - ADDD dir
+        bra     DO_ANDB_DIR             ; d4 - ANDB dir
+        bra     DO_BITB_DIR             ; d5 - BITB dir
+        bra     DO_LDB_DIR              ; d6 - LDB dir
+        bra     DO_STB_DIR              ; d7 - STB dir
+        bra     DO_EORB_DIR             ; d8 - EORB dir
+        bra     DO_ADCB_DIR             ; d9 - ADCB dir
+        bra     DO_ORB_DIR              ; da - ORB dir
+        bra     DO_ADDB_DIR             ; db - ADDB dir
+        bra     DO_LDD_DIR              ; dc - LDD dir
+        bra     DO_STD_DIR              ; dd - STD dir
+        bra     DO_LDU_DIR              ; de - LDU dir
+        bra     DO_STU_DIR              ; df - STU dir
 
-        bra     DO_SUBB_IDX             ; e0 -
-        bra     DO_CMPB_IDX             ; e1 -
-        bra     DO_SBCB_IDX             ; e2 -
-        bra     DO_ADDD_IDX             ; e3 -
-        bra     DO_ANDB_IDX             ; e4 -
-        bra     DO_BITB_IDX             ; e5 -
-        bra     DO_LDB_IDX              ; e6 -
-        bra     DO_STB_IDX              ; e7 -
-        bra     DO_EORB_IDX             ; e8 -
-        bra     DO_ADCB_IDX             ; e9 -
-        bra     DO_ORB_IDX              ; ea -
-        bra     DO_ADDB_IDX             ; eb -
-        bra     DO_LDD_IDX              ; ec -
-        bra     DO_STD_IDX              ; ed -
-        bra     DO_LDU_IDX              ; ee -
-        bra     DO_STU_IDX              ; ef -
+        bra     DO_SUBB_IDX             ; e0 - SUBB idx
+        bra     DO_CMPB_IDX             ; e1 - CMPB idx
+        bra     DO_SBCB_IDX             ; e2 - SBCB idx
+        bra     DO_ADDD_IDX             ; e3 - ADDD idx
+        bra     DO_ANDB_IDX             ; e4 - ANDB idx
+        bra     DO_BITB_IDX             ; e5 - BITB idx
+        bra     DO_LDB_IDX              ; e6 - LDB idx
+        bra     DO_STB_IDX              ; e7 - STB idx
+        bra     DO_EORB_IDX             ; e8 - EORB idx
+        bra     DO_ADCB_IDX             ; e9 - ADCN idx
+        bra     DO_ORB_IDX              ; ea - ORB idx
+        bra     DO_ADDB_IDX             ; eb - ADDB idx
+        bra     DO_LDD_IDX              ; ec - LDD idx
+        bra     DO_STD_IDX              ; ed - STD idx
+        bra     DO_LDU_IDX              ; ee - LDU idx
+        bra     DO_STU_IDX              ; ef - STU idx
 
-        bra     DO_SUBB_EXT             ; f0 -
-        bra     DO_CMPB_EXT             ; f1 -
-        bra     DO_SBCB_EXT             ; f2 -
-        bra     DO_ADDD_EXT             ; f3 -
-        bra     DO_ANDB_EXT             ; f4 -
-        bra     DO_BITB_EXT             ; f5 -
-        bra     DO_LDB_EXT              ; f6 -
-        bra     DO_STB_EXT              ; f7 -
-        bra     DO_EORB_EXT             ; f8 -
-        bra     DO_ADCB_EXT             ; f9 -
-        bra     DO_ORB_EXT              ; fa -
-        bra     DO_ADDB_EXT             ; fb -
-        bra     DO_LDD_EXT              ; fc -
-        bra     DO_STD_EXT              ; fd -
-        bra     DO_LDU_EXT              ; fe -
-        bra     DO_STU_EXT              ; ff -
+        bra     DO_SUBB_EXT             ; f0 - SUBB ext
+        bra     DO_CMPB_EXT             ; f1 - CMPN ext
+        bra     DO_SBCB_EXT             ; f2 - SBCB ext
+        bra     DO_ADDD_EXT             ; f3 - ADDD ext
+        bra     DO_ANDB_EXT             ; f4 - ANDB ext
+        bra     DO_BITB_EXT             ; f5 - BITB ext
+        bra     DO_LDB_EXT              ; f6 - LDB ext
+        bra     DO_STB_EXT              ; f7 - STB ext
+        bra     DO_EORB_EXT             ; f8 - EORB ext
+        bra     DO_ADCB_EXT             ; f9 - ADCB ext
+        bra     DO_ORB_EXT              ; fa - ORB ext
+        bra     DO_ADDB_EXT             ; fb - ADDB ext
+        bra     DO_LDD_EXT              ; fc - LDD ext
+        bra     DO_STD_EXT              ; fd - STD ext
+        bra     DO_LDU_EXT              ; fe - LDU ext
+        bra     DO_STU_EXT              ; ff - STU ext
 
 ;-------------------------------------------------------------------------------
 
@@ -512,7 +512,7 @@ Prefix10:
         bra     DO_ERR                  ; 9b -
         bra     DO_CMPY_DIR             ; 9c - CMPY dir
         bra     DO_ERR                  ; 9d -
-        bra     DO_LDY_DIR              ; 9e - LDy dir
+        bra     DO_LDY_DIR              ; 9e - LDY dir
         bra     DO_STY_DIR              ; 9f - STY dir
 
         bra     DO_ERR                  ; a0 -

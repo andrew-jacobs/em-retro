@@ -508,7 +508,7 @@
         .endm
 
         .macro  OP_ST,REG
-	sl	\REG,#8,w3			; Extract the MSB
+	sl	\REG,#8,w3		; Extract the MSB
 	WR_ADDR	w2,w3			; .. and store it
 	inc	w2,w2			; Bump target address
 	WR_ADDR	w2,\REG			; .. and write LSB
