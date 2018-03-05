@@ -99,13 +99,13 @@ section                    address   length (PC units)   length (bytes) (dec)
 .z80                       0x2bd40              0x1d08          0x2b8c  (11148)
 .8080                      0x2da48              0x1774          0x232e  (9006)
 .1802                      0x2f1bc              0x1490          0x1ed8  (7896)
-.text                      0x3064c               0x89a           0xce7  (3303)
-.dinit                     0x30ee6                0x38            0x54  (84)
+.text                      0x3064c               0x896           0xce1  (3297)
+.dinit                     0x30ee2                0x38            0x54  (84)
 .blank_page                0x31000              0x1000          0x1800  (6144)
 .nibl_scmp                 0x32000              0x1000          0x1800  (6144)
 .scarab_scmp               0x33000              0x1000          0x1800  (6144)
 
-                 Total program memory used (bytes):        0x4a1ea  (303594) 57%
+                 Total program memory used (bytes):        0x4a1e4  (303588) 57%
 
 
 Ivt Memory  [Origin = 0x4, Length = 0x1fc]
@@ -193,38 +193,38 @@ External Symbols in Program Memory (by address):
                   0x02da48                  EM_8080
                   0x02f1bc                  EM_1802
                   0x03064c                  __reset
-                  0x030ae8                  ClearScreen
-                  0x030af2                  GotoHome
-                  0x030af6                  GotoRowCol
-                  0x030b1e                  AttrBold
-                  0x030b28                  AttrNorm
-                  0x030b32                  AttrInverse
-                  0x030b3c                  EmitCSI
-                  0x030b44                  PutStr
-                  0x030b62                  PutHex4
-                  0x030b6a                  PutHex2
-                  0x030b9a                  __U1RXInterrupt
-                  0x030ba0                  __U1TXInterrupt
-                  0x030ba8                  UartRx
-                  0x030bb2                  UartTx
-                  0x030bbe                  __U1ErrInterrupt
-                  0x030bc0                  SpiSetLo
-                  0x030bc4                  SpiSetHi
-                  0x030bc8                  SpiFast
-                  0x030cc0                  SpiSlow
-                  0x030ed2                  __T1Interrupt
-                  0x030ed8                  __T2Interrupt
-                  0x030ede                  __CNInterrupt
+                  0x030ae4                  ClearScreen
+                  0x030aee                  GotoHome
+                  0x030af2                  GotoRowCol
+                  0x030b1a                  AttrBold
+                  0x030b24                  AttrNorm
+                  0x030b2e                  AttrInverse
+                  0x030b38                  EmitCSI
+                  0x030b40                  PutStr
+                  0x030b5e                  PutHex4
+                  0x030b66                  PutHex2
+                  0x030b96                  __U1RXInterrupt
+                  0x030b9c                  __U1TXInterrupt
+                  0x030ba4                  UartRx
+                  0x030bae                  UartTx
+                  0x030bba                  __U1ErrInterrupt
+                  0x030bbc                  SpiSetLo
+                  0x030bc0                  SpiSetHi
+                  0x030bc4                  SpiFast
+                  0x030cbc                  SpiSlow
+                  0x030ece                  __T1Interrupt
+                  0x030ed4                  __T2Interrupt
+                  0x030eda                  __CNInterrupt
                   0x031000                  BLANK
                   0x0557fa                  __FGS.sec
 
 External Symbols in Program Memory (by name):
 
-                  0x030b1e                  AttrBold
-                  0x030b32                  AttrInverse
-                  0x030b28                  AttrNorm
+                  0x030b1a                  AttrBold
+                  0x030b2e                  AttrInverse
+                  0x030b24                  AttrNorm
                   0x031000                  BLANK
-                  0x030ae8                  ClearScreen
+                  0x030ae4                  ClearScreen
                   0x02f1bc                  EM_1802
                   0x021eea                  EM_6502
                   0x006000                  EM_65C02
@@ -233,26 +233,26 @@ External Symbols in Program Memory (by name):
                   0x02da48                  EM_8080
                   0x02a000                  EM_SCMP
                   0x02bd40                  EM_Z80
-                  0x030b3c                  EmitCSI
-                  0x030af2                  GotoHome
-                  0x030af6                  GotoRowCol
-                  0x030b6a                  PutHex2
-                  0x030b62                  PutHex4
-                  0x030b44                  PutStr
-                  0x030bc8                  SpiFast
-                  0x030bc4                  SpiSetHi
-                  0x030bc0                  SpiSetLo
-                  0x030cc0                  SpiSlow
-                  0x030ba8                  UartRx
-                  0x030bb2                  UartTx
-                  0x030ede                  __CNInterrupt
+                  0x030b38                  EmitCSI
+                  0x030aee                  GotoHome
+                  0x030af2                  GotoRowCol
+                  0x030b66                  PutHex2
+                  0x030b5e                  PutHex4
+                  0x030b40                  PutStr
+                  0x030bc4                  SpiFast
+                  0x030bc0                  SpiSetHi
+                  0x030bbc                  SpiSetLo
+                  0x030cbc                  SpiSlow
+                  0x030ba4                  UartRx
+                  0x030bae                  UartTx
+                  0x030eda                  __CNInterrupt
                   0x0002b2                  __DefaultInterrupt
                   0x0557fa                  __FGS.sec
-                  0x030ed2                  __T1Interrupt
-                  0x030ed8                  __T2Interrupt
-                  0x030bbe                  __U1ErrInterrupt
-                  0x030b9a                  __U1RXInterrupt
-                  0x030ba0                  __U1TXInterrupt
+                  0x030ece                  __T1Interrupt
+                  0x030ed4                  __T2Interrupt
+                  0x030bba                  __U1ErrInterrupt
+                  0x030b96                  __U1RXInterrupt
+                  0x030b9c                  __U1TXInterrupt
                   0x000200                  __data_init
                   0x000200                  __data_init_extended
                   0x03064c                  __reset
@@ -401,7 +401,7 @@ __FUID3
  .debug_abbrev    0x00008c         0x14 build/default/production/em-z80.o
  .debug_abbrev    0x0000a0         0x14 build/default/production/firmware.o
 
-.debug_line       0x000000       0x2eb0
+.debug_line       0x000000       0x2eaf
  *(.debug_line)
  .debug_line      0x000000        0x328 build/default/production/em-1802.o
  .debug_line      0x000328        0x533 build/default/production/em-6502.o
@@ -412,7 +412,7 @@ __FUID3
  .debug_line      0x001fb3         0x1a build/default/production/em-retro.o
  .debug_line      0x001fcd        0x37f build/default/production/em-scmp.o
  .debug_line      0x00234c        0x8d4 build/default/production/em-z80.o
- .debug_line      0x002c20        0x290 build/default/production/firmware.o
+ .debug_line      0x002c20        0x28f build/default/production/firmware.o
 
 .debug_frame
  *(.debug_frame)
@@ -1442,31 +1442,31 @@ __c30_signature
 .scarab_scmp      0x033000       0x1000
  .scarab_scmp     0x033000       0x1000 build/default/production/em-scmp.o
 
-.text             0x03064c        0x89a
- .text            0x03064c        0x89a build/default/production/firmware.o
+.text             0x03064c        0x896
+ .text            0x03064c        0x896 build/default/production/firmware.o
                   0x03064c                  __reset
-                  0x030ae8                  ClearScreen
-                  0x030af2                  GotoHome
-                  0x030af6                  GotoRowCol
-                  0x030b1e                  AttrBold
-                  0x030b28                  AttrNorm
-                  0x030b32                  AttrInverse
-                  0x030b3c                  EmitCSI
-                  0x030b44                  PutStr
-                  0x030b62                  PutHex4
-                  0x030b6a                  PutHex2
-                  0x030b9a                  __U1RXInterrupt
-                  0x030ba0                  __U1TXInterrupt
-                  0x030ba8                  UartRx
-                  0x030bb2                  UartTx
-                  0x030bbe                  __U1ErrInterrupt
-                  0x030bc0                  SpiSetLo
-                  0x030bc4                  SpiSetHi
-                  0x030bc8                  SpiFast
-                  0x030cc0                  SpiSlow
-                  0x030ed2                  __T1Interrupt
-                  0x030ed8                  __T2Interrupt
-                  0x030ede                  __CNInterrupt
+                  0x030ae4                  ClearScreen
+                  0x030aee                  GotoHome
+                  0x030af2                  GotoRowCol
+                  0x030b1a                  AttrBold
+                  0x030b24                  AttrNorm
+                  0x030b2e                  AttrInverse
+                  0x030b38                  EmitCSI
+                  0x030b40                  PutStr
+                  0x030b5e                  PutHex4
+                  0x030b66                  PutHex2
+                  0x030b96                  __U1RXInterrupt
+                  0x030b9c                  __U1TXInterrupt
+                  0x030ba4                  UartRx
+                  0x030bae                  UartTx
+                  0x030bba                  __U1ErrInterrupt
+                  0x030bbc                  SpiSetLo
+                  0x030bc0                  SpiSetHi
+                  0x030bc4                  SpiFast
+                  0x030cbc                  SpiSlow
+                  0x030ece                  __T1Interrupt
+                  0x030ed4                  __T2Interrupt
+                  0x030eda                  __CNInterrupt
 
-.dinit            0x030ee6         0x38
- .dinit           0x030ee6         0x38 data_init
+.dinit            0x030ee2         0x38
+ .dinit           0x030ee2         0x38 data_init
